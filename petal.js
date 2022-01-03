@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     messages.innerHTML += `<p class="msg">${contents}</p>`
 
-    if (scrollPos + userSettings.scrollThreshold >= scrollHeight) {
+    if (messages.scrollTop + userSettings.scrollThreshold >= scrollHeight) {
       messages.scrollTop = messages.scrollHeight
     }
   }
