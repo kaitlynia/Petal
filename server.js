@@ -1,7 +1,11 @@
 const fs = require('fs')
 const https = require('https')
 const WSServer = require('ws').Server
-const DOMPurify = require('dompurify').DOMPurify
+const createDOMPurify = require('dompurify')
+const JSDOM = require('jsdom').JSDOM
+
+const window = new JSDOM('').window
+const DOMPurify = createDOMPurify(window)
 
 const https_key = fs.readFileSync('./privkey.pem', 'utf8')
 const https_cert = fs.readFileSync('./fullchain.pem', 'utf8')
