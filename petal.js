@@ -82,14 +82,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (cleanContents !== '') {
         // process entry contents
-        const commandResult = tryCommand(contents)
+        const commandResult = tryCommand(cleanContents)
 
         // handle command or handle message
         if (commandResult) {
           appendMessage(`<i class="client-message">${commandResult}</i>`)
         } else {
           try {
-            server.send(`<span style="color:${userSettings.color}">${userSettings.name}: </span>${contents}`)
+            server.send(`<span style="color:${userSettings.color}">${userSettings.name}: </span>${cleanContents}`)
           } catch (e) {
             console.log(e)
             server = promptForServer('failed to send message. enter server address')
@@ -119,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
       reader.readAsText(contents)
     }
 
-    return contents.trim()
+    return cleanContents.trim()
   }
 
   const appendMessage = (contents) => {
@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (cleanContents !== '') {
       const scrollHeight = messages.scrollHeight
     
-      messages.innerHTML += `<p class="msg">${contents}</p>`
+      messages.innerHTML += `<p class="msg">${cleanContents}</p>`
 
       if (messages.clientHeight + messages.scrollTop + userSettings.scrollThreshold >= scrollHeight) {
         messages.scrollTop = messages.scrollHeight
