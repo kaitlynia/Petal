@@ -3,12 +3,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let host = prompt(initialPrompt)
     while (true) {
       try {
-        server = new WebSocket(`ws://${host}`)
+        server = new WebSocket(`wss://${host}`)
         localStorage.setItem('server', server.url)
         return server
       } catch (e) {
         console.log(e)
-        host = prompt('invalid server address, try again')
+        host = prompt(`error: ${e}\n\n try again`)
       }
     }
   }
