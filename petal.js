@@ -78,9 +78,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // prevent newline character
       event.preventDefault()
 
-      const contents = entry.value.trim()
+      const cleanContents = cleanMessage(contents)
 
-      if (contents !== '') {
+      if (cleanContents !== '') {
         // process entry contents
         const commandResult = tryCommand(contents)
 
@@ -106,11 +106,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  const appendMessage = (contents) => {
-    let cleanContents = contents
+  const cleanMessage = (contents) => {
+    const cleanContents = contents
 
     if (contents instanceof Blob) {
-      let reader = new FileReader()
+      const reader = new FileReader()
 
       reader.onload = () => {
         cleanContents = DOMPurify.sanitize(reader.result, sanitizeConfig)
@@ -119,12 +119,20 @@ document.addEventListener('DOMContentLoaded', () => {
       reader.readAsText(contents)
     }
 
-    const scrollHeight = messages.scrollHeight
-    
-    messages.innerHTML += `<p class="msg">${contents}</p>`
+    return contents.trim()
+  }
 
-    if (messages.clientHeight + messages.scrollTop + userSettings.scrollThreshold >= scrollHeight) {
-      messages.scrollTop = messages.scrollHeight
+  const appendMessage = (contents) => {
+    let cleanContents = cleanMessage(contents)
+
+    if (cleanContents !== '') {
+      const scrollHeight = messages.scrollHeight
+    
+      messages.innerHTML += `<p class="msg">${contents}</p>`
+
+      if (messages.clientHeight + messages.scrollTop + userSettings.scrollThreshold >= scrollHeight) {
+        messages.scrollTop = messages.scrollHeight
+      }
     }
   }
 
