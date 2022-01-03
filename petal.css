@@ -1,0 +1,60 @@
+* {
+  box-sizing: border-box;
+  font-family: sans-serif;
+  margin: 0;
+  scrollbar-color: #FFFFFF #202020;
+  scrollbar-width: 1rem;
+}
+
+html {
+  font-size: 20px;
+}
+
+#app, #entry, #messages {
+  background-color: #202020;
+  color: #FFFFFF;
+  font-size: 1rem;
+  line-height: 1.5;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 1440px;
+}
+
+#app {
+  height: 100vh;
+  padding: 2rem;
+}
+
+#petal {
+  font-size: 5rem;
+  right: 0;
+  bottom: 0;
+  opacity: 0.3;
+  mix-blend-mode: screen;
+  position: absolute;
+  user-select: none;
+  z-index: 0;
+}
+
+#messages {
+  height: 85%;
+  overflow-y: scroll;
+  padding: 0 calc(0.75rem + 2px) 1rem;
+  position: relative;
+}
+
+#entry {
+  border: 2px solid rgba(128, 128, 128, 0.2);
+  height: 15%;
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  resize: none;
+  width: 100%;
+}
+#entry:focus {
+  outline: 0;
+}
+
+.client-message {
+  color: #A0A0A0;
+}
