@@ -120,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
       let reader = new FileReader()
 
       reader.onload = () => {
-        appendMessage(reader.result);
+        appendMessage(DOMPurify.sanitize(reader.result))
       }
 
       reader.readAsText(event.data)
