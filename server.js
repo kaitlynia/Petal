@@ -21,7 +21,7 @@ let all = []
 wss.on('connection', sock => {
   all.push(sock)
   sock.on('message', msg => {
-    all.forEach(s => s.send(DOMPurify.sanitize(msg)))
+    all.forEach(s => s.send(DOMPurify.sanitize(msg, { ALLOWED_TAGS: ['strong', 'b', 'em', 'i'] })))
   })
   sock.on('close', () => {
     all = all.filter(s => s != sock)

@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
   entry = document.querySelector('#entry')
 
   let controlKeyHeld = false,
+  sanitizeConfig = { ALLOWED_TAGS: ['strong', 'b', 'em', 'i'] },
   userSettings = {
     name: localStorage.getItem('name') || 'anon',
     color: localStorage.getItem('color') || '#A0A0A0',
@@ -106,6 +107,18 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const appendMessage = (contents) => {
+    let cleanContents = contents
+
+    if (contents instanceof Blob) {
+      let reader = new FileReader()
+
+      reader.onload = () => {
+        cleanContents = DOMPurify.sanitize(reader.result, sanitizeConfig)
+      }
+
+      reader.readAsText(contents)
+    }
+
     const scrollHeight = messages.scrollHeight
     
     messages.innerHTML += `<p class="msg">${contents}</p>`
@@ -116,17 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const onMessage = (event) => {
-    if (event.data instanceof Blob) {
-      let reader = new FileReader()
-
-      reader.onload = () => {
-        appendMessage(DOMPurify.sanitize(reader.result))
-      }
-
-      reader.readAsText(event.data)
-    } else {
-      appendMessage(event.data)
-    }
+    appendMessage(event.data)
   }
 
   body.addEventListener('keydown', (event) => {
