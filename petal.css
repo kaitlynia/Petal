@@ -23,17 +23,18 @@ html {
 #app {
   height: 100vh;
   padding: 2rem;
+  position: relative;
 }
 
 #petal {
   font-size: 5rem;
-  right: 0;
-  bottom: 0;
+  right: 41px;
+  bottom: 17vh;
   opacity: 0.3;
   mix-blend-mode: screen;
   position: absolute;
   user-select: none;
-  z-index: 0;
+  z-index: 1;
 }
 
 #messages {
