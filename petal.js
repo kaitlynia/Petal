@@ -105,11 +105,21 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const appendMessage = (contents) => {
-    messages.innerHTML += `<p>${contents}</p>`
+    messages.innerHTML += `<p class="msg">${contents}</p>`
   }
 
   const onMessage = (event) => {
-    appendMessage(event.data)
+    if (event.data instanceof Blob) {
+      let reader = new FileReader()
+
+      reader.onload = () => {
+        appendMessage(reader.result);
+      }
+
+      reader.readAsText(event.data)
+    } else {
+      appendMessage(event.data)
+    }
   }
 
   body.addEventListener('keydown', (event) => {
