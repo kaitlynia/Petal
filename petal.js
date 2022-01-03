@@ -78,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // prevent newline character
       event.preventDefault()
 
-      const cleanContents = cleanMessage(contents)
+      const cleanContents = cleanMessage(entry.value)
 
       if (cleanContents !== '') {
         // process entry contents
@@ -109,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const cleanMessage = (contents) => {
     const cleanContents = contents
 
-    if (contents instanceof Blob) {
+    if (cleanContents instanceof Blob) {
       const reader = new FileReader()
 
       reader.onload = () => {
