@@ -34,7 +34,8 @@ document.addEventListener('DOMContentLoaded', () => {
   userSettings = {
     name: localStorage.getItem('name') || 'anon',
     color: localStorage.getItem('color') || '#A0A0A0',
-    theme: localStorage.getItem('theme') || 'dark'
+    theme: localStorage.getItem('theme') || 'dark',
+    scrollThreshold: 50,
   }
 
   const commands = {
@@ -105,7 +106,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const appendMessage = (contents) => {
+    const scrollHeight = messages.scrollHeight
+    
     messages.innerHTML += `<p class="msg">${contents}</p>`
+
+    if (scrollPos + userSettings.scrollThreshold >= scrollHeight) {
+      messages.scrollTop = messages.scrollHeight
+    }
   }
 
   const onMessage = (event) => {
