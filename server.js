@@ -40,6 +40,7 @@ let all = []
 wss.on('connection', sock => {
   all.push(sock)
   sock.name = 'anon'
+  sock.nameColor = '#aaaaaa'
 
   sock.on('message', msg => {
     const payload = JSON.parse(msg)
@@ -91,12 +92,13 @@ wss.on('connection', sock => {
         case 'auth-recv':
           if (sock.auth_pair !== undefined) {
             sock.name = sock.auth_pair.name
-            data.names[sock.auth_pair.name] = sock.name
+            data.names[sock.auth_pair.name] = sock.auth_pair.token
             sock.auth_pair = undefined
 
             saveData()
             sock.send(JSON.stringify({
-              type: 'auth-ok'
+              type: 'auth-ok',
+              name: sock.name
             }))
           }
           break

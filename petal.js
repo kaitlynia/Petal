@@ -166,16 +166,14 @@ document.addEventListener('DOMContentLoaded', () => {
       case 'auth-new':
         userData.name = payload.name
         userData.token = payload.token
-        localStorage.setItem('name', userData.name)
-        localStorage.setItem('token', userData.token)
         appendMessage('account created. logging in...', true)
         server.send(JSON.stringify({
-          type: 'auth-token',
-          name: userData.name,
-          token: userData.token
+          type: 'auth-recv'
         }))
         break
       case 'auth-ok':
+        localStorage.setItem('name', userData.name)
+        localStorage.setItem('token', userData.token)
         appendMessage(`logged in as ${payload.name}`, true)
         break
       case 'auth-fail':
