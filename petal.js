@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let cleanBody = cleanMessage(payload.body)
 
     if (cleanBody !== '') {
-      appendMessage(`<span style="color:${payload.nameColor}">${payload.name}: </span>${cleanBody}`)
+      appendMessage(`<b style="color:${payload.nameColor}">${payload.name}: </span>${cleanBody}`)
     }
   }
 
@@ -185,7 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
       case 'command-color-ok':
         userData.color = payload.color
         localStorage.setItem('color', userData.color)
-        appendMessage(`color changed to <b style="color:${userData.color}>${userData.color}</b>`, true)
+        appendMessage(`color changed to <b style="color:${userData.color}">${userData.color}</b>`, true)
         break
       case 'command-color-auth-required':
         appendMessage('only logged in users can use the /color command. use /name to log in', true)
