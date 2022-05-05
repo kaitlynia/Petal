@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const commands = {
     help: () => {
-      return `commands: ${Object.keys(commands).join(', ')}`
+      appendMessage(`commands: ${Object.keys(commands).join(', ')}`, true)
     },
     name: (args) => {
       if (args) {
@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
           name: DOMPurify.sanitize(args, sanitizeConfig)
         }))
       } else {
-        return 'missing required name argument. example: /name cooluser23'
+        appendMessage('missing required name argument. example: /name cooluser23', true)
       }
     },
     color: (args) => {
@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
           color: DOMPurify.sanitize(args, sanitizeConfig)
         }))
       } else {
-        return 'missing required color argument. examples: /color pink, /color #fffaaa, /color rgb(200, 200, 100)'
+        appendMessage('missing required color argument. examples: /color pink, /color #fffaaa, /color rgb(200, 200, 100)', true)
       }
     }
   }
@@ -71,11 +71,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const cmdArgs = contents.split(' ', 2)
       const cmd = cmdArgs[0].slice(1)
       if (commands.hasOwnProperty(cmd)) {
-        return commands[cmdArgs[0].slice(1)](cmdArgs.slice(1)[0])
+        commands[cmdArgs[0].slice(1)](cmdArgs.slice(1)[0])
       } else {
-        return `unknown command: ${cmd}`
+        appendMessage((commandResult, true)`unknown command: ${cmd}`, true)
       }
+      return true
     }
+    return false
   }
 
   const processKeyboardEvent = (event) => {
@@ -87,12 +89,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (cleanContents !== '') {
         // process entry contents
-        const commandResult = tryCommand(cleanContents)
+        const wasCommand = tryCommand(cleanContents)
 
-        // handle command or handle message
-        if (commandResult) {
-          appendMessage(commandResult, true)
-        } else {
+        if (!wasCommand) {
           try {
             server.send(JSON.stringify({
               type: 'message',
