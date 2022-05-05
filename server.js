@@ -20,6 +20,12 @@ const wss = new WSServer({
 
 const sanitizeConfig = { ALLOWED_TAGS: ['span', 'strong', 'b', 'em', 'i'] }
 
+/*
+if (data.names.hasOwnProperty(name)) {
+               ^
+TypeError: Cannot read properties of undefined (reading 'hasOwnProperty')
+*/
+
 let data = {'names': {}, 'nameColors': {}}
 
 if (fs.existsSync(dataPath)) {
@@ -45,19 +51,19 @@ wss.on('connection', sock => {
             const name = DOMPurify.sanitize(payload.name, sanitizeConfig)
             if (data.names.hasOwnProperty(name)) {
               // name already exists, notify client and optionally request an auth-token reply
-              this.send(JSON.stringify({
+              sock.send(JSON.stringify({
                 type: 'auth-exists',
                 name: name
               }))
             } else {
-              this.auth_pair = {
+              sock.auth_pair = {
                 name: payload.name,
                 token: crypto.randomUUID()
               }
-              this.send(JSON.stringify({
+              sock.send(JSON.stringify({
                 type: 'auth-new',
                 name: payload.name,
-                token: this.auth_pair.token
+                token: sock.auth_pair.token
               }))
             }
           }
@@ -67,15 +73,15 @@ wss.on('connection', sock => {
             const name = DOMPurify.sanitize(payload.name, sanitizeConfig)
             if (data.names.hasOwnProperty(name)) {
               if (data.names[name] === payload.token) {
-                this.name = name
-                this.nameColor = data.nameColors[name] || '#aaaaaa'
+                sock.name = name
+                sock.nameColor = data.nameColors[name] || '#aaaaaa'
 
-                this.send(JSON.stringify({
+                sock.send(JSON.stringify({
                   type: 'auth-ok',
                   name: name
                 }))
               } else {
-                this.send(JSON.stringify({
+                sock.send(JSON.stringify({
                   type: 'auth-fail'
                 }))
               }
@@ -83,13 +89,13 @@ wss.on('connection', sock => {
           }
           break
         case 'auth-recv':
-          if (this.auth_pair !== undefined) {
-            this.name = this.auth_pair.name
-            data.names[this.auth_pair.name] = this.name
-            this.auth_pair = undefined
+          if (sock.auth_pair !== undefined) {
+            sock.name = sock.auth_pair.name
+            data.names[sock.auth_pair.name] = sock.name
+            sock.auth_pair = undefined
 
             saveData()
-            this.send(JSON.stringify({
+            sock.send(JSON.stringify({
               type: 'auth-ok'
             }))
           }
@@ -98,23 +104,23 @@ wss.on('connection', sock => {
           if (payload.hasOwnProperty('body')) {
             all.forEach(s => s.send(JSON.stringify({
               type: 'message',
-              name: this.name || 'anon',
-              nameColor: this.nameColor || '#aaaaaa',
+              name: sock.name || 'anon',
+              nameColor: sock.nameColor || '#aaaaaa',
               body: DOMPurify.sanitize(payload.body, sanitizeConfig)
             })))
           }
           break
         case 'command-color':
           if (payload.hasOwnProperty('color')) {
-            if (this.name !== undefined) {
+            if (sock.name !== undefined) {
               const color = DOMPurify.sanitize(payload.color, sanitizeConfig)
-              data.nameColors[this.name] = color
-              this.send(JSON.stringify({
+              data.nameColors[sock.name] = color
+              sock.send(JSON.stringify({
                 'type': 'command-color-ok',
                 'color': color
               }))
             } else {
-              this.send(JSON.stringify({
+              sock.send(JSON.stringify({
                 'type': 'command-color-auth-required'
               }))
             }
