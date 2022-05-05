@@ -116,6 +116,7 @@ wss.on('connection', sock => {
           if (payload.hasOwnProperty('color')) {
             if (sock.name !== 'anon') {
               const color = DOMPurify.sanitize(payload.color, sanitizeConfig)
+              sock.nameColor = color
               data.nameColors[sock.name] = color
               saveData()
 
