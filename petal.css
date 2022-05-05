@@ -1,22 +1,31 @@
+:root {
+  --dark: #202020;
+  --grey: rgba(128, 128, 128, 0.2);
+  --system-message: #aaaaaa;
+  --small: 12px;
+  --medium: 24px;
+  --large: 36px;
+}
+
 * {
   box-sizing: border-box;
   font-family: sans-serif;
   margin: 0;
-  scrollbar-color: rgba(128, 128, 128, 0.2) #202020;
-  scrollbar-width: 12px;
+  scrollbar-color: var(--grey) var(--dark);
+  scrollbar-width: var(--small);
 }
 
 ::-webkit-scrollbar {
-  width: 12px;
+  width: var(--small);
 }
 ::-webkit-scrollbar-track {
-  background: #202020;
+  background: var(--dark);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(128, 128, 128, 0.2);
+  background: var(--grey);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(128, 128, 128, 0.2);
+  background: var(--grey);
 }
 
 html {
@@ -24,12 +33,12 @@ html {
 }
 
 #main {
-  background-color: #202020;
+  background-color: var(--dark);
   display: flex;
   height: 100vh;
   justify-content: space-between;
   align-items: center;
-  padding: 36px;
+  padding: var(--large);
 }
 
 #player {
@@ -39,12 +48,12 @@ html {
 #chat {
   height: 774px;
   min-width: 440px;
-  padding-left: 24px;
+  padding-left: var(--medium);
   position: relative;
 }
 
 #chat, #entry, #messages {
-  background-color: #202020;
+  background-color: var(--dark);
   color: #FFFFFF;
   font-size: 1rem;
   line-height: 1.5;
@@ -70,10 +79,10 @@ html {
 }
 
 #entry {
-  border: 2px solid rgba(128, 128, 128, 0.2);
+  border: 2px solid var(--grey);
   height: 15%;
   margin: 0;
-  padding: 12px 16px;
+  padding: var(--small) 16px;
   resize: none;
   width: 100%;
   scrollbar-width: 10px;
@@ -87,5 +96,5 @@ html {
 }
 
 .msg--system {
-  color: #aaaaaa;
+  color: var(--system-message);
 }
