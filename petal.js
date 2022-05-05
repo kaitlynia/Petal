@@ -173,7 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
       case 'auth-ok':
         localStorage.setItem('name', userData.name)
         localStorage.setItem('token', userData.token)
-        appendMessage(`logged in as ${payload.name}`, true)
+        appendMessage(`logged in as <b style="color:${payload.nameColor}">${payload.name}</b>`, true)
         break
       case 'auth-fail':
         appendMessage(`login failed. if you believe this is an error, report it to lynn`, true)
