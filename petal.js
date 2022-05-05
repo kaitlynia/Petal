@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
   entry = document.querySelector('#entry')
 
   let controlKeyHeld = false,
-  sanitizeConfig = { ALLOWED_TAGS: ['span', 'strong', 'b', 'em', 'i'] },
+  sanitizeConfig = { ALLOWED_TAGS: ['span', 'strong', 'b', 'em', 'i'], ALLOWED_ATTR: [] },
   userData = {
     token: localStorage.getItem('token') || undefined,
     name: localStorage.getItem('name') || undefined,

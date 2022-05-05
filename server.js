@@ -18,7 +18,7 @@ const wss = new WSServer({
   server: https_server
 })
 
-const sanitizeConfig = { ALLOWED_TAGS: ['span', 'strong', 'b', 'em', 'i'] }
+const sanitizeConfig = { ALLOWED_TAGS: ['span', 'strong', 'b', 'em', 'i'], ALLOWED_ATTR: [] }
 
 /*
 if (data.names.hasOwnProperty(name)) {
