@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let host = prompt(initialPrompt)
     while (true) {
       try {
-        server = new WebSocket(`wss://${host}`)
+        server = new WebSocket(`wss://${host || 'lynn.fun:8080'}`)
         localStorage.setItem('server', server.url)
         return server
       } catch (e) {
@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let __serverAddress = localStorage.getItem('server')
 
   if (__serverAddress === null) {
-    server = promptForServer('enter server address')
+    server = promptForServer('enter server address (or leave blank for lynn.fun:8080)')
   } else {
     try {
       server = new WebSocket(__serverAddress)
