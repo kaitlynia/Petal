@@ -63,8 +63,8 @@ html {
 
 #petal {
   font-size: 4rem;
-  right: 12px;
-  bottom: 112px;
+  right: 10px;
+  bottom: 110px;
   opacity: 0.3;
   mix-blend-mode: screen;
   position: absolute;
@@ -76,6 +76,7 @@ html {
   height: 85%;
   overflow-y: scroll;
   position: relative;
+  padding-bottom: var(--small);
 }
 
 #entry {
@@ -97,4 +98,36 @@ html {
 
 .msg--system {
   color: var(--system-message);
+}
+
+@media (max-width: 1200px) {
+  #main {
+    flex-direction: column;
+    padding: unset;
+  }
+
+  #player {
+    width: 100%;
+  }
+
+  #chat {
+    min-width: unset;
+    max-height: 800px;
+    padding-left: unset;
+    padding: var(--medium);
+    width: 100%;
+  }
+
+  #messages {
+    height: 36vh;
+  }
+
+  #entry {
+    height: 10vh;
+  }
+
+  #petal {
+    bottom: 12.5vh;
+    right: 28px;
+  }
 }
