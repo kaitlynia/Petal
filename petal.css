@@ -23,27 +23,31 @@ html {
   font-size: 20px;
 }
 
-#wrapper {
+#main {
+  background-color: #202020;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 24px;
+  padding: 0;
 }
 
-#app, #entry, #messages {
-  background-color: #202020;
+#player {
+  border: 0;
+}
+
+#chat {
+  height: 100vh;
+  min-width: 440px;
+  padding: 36px 24px;
+  position: relative;
+}
+
+#chat, #entry, #messages {
   color: #FFFFFF;
   font-size: 1rem;
   line-height: 1.5;
   margin-left: auto;
   margin-right: auto;
-  max-width: 440px;
-}
-
-#app {
-  height: 100vh;
-  padding: 48px;
-  position: relative;
 }
 
 #petal {
