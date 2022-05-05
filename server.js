@@ -79,7 +79,8 @@ wss.on('connection', sock => {
 
                 sock.send(JSON.stringify({
                   type: 'auth-ok',
-                  name: name
+                  name: name,
+                  nameColor: sock.nameColor
                 }))
               } else {
                 sock.send(JSON.stringify({
@@ -98,7 +99,8 @@ wss.on('connection', sock => {
             saveData()
             sock.send(JSON.stringify({
               type: 'auth-ok',
-              name: sock.name
+              name: sock.name,
+              nameColor: data.nameColors[sock.name] || '#aaaaaa'
             }))
           }
           break
