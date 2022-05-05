@@ -117,13 +117,15 @@ wss.on('connection', sock => {
             if (sock.name !== undefined) {
               const color = DOMPurify.sanitize(payload.color, sanitizeConfig)
               data.nameColors[sock.name] = color
+              saveData()
+
               sock.send(JSON.stringify({
-                'type': 'command-color-ok',
-                'color': color
+                type: 'command-color-ok',
+                color: color
               }))
             } else {
               sock.send(JSON.stringify({
-                'type': 'command-color-auth-required'
+                type: 'command-color-auth-required'
               }))
             }
           }
