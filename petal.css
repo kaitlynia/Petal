@@ -28,7 +28,7 @@ html {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0;
+  padding: 0 12px;
 }
 
 #player {
@@ -43,6 +43,7 @@ html {
 }
 
 #chat, #entry, #messages {
+  background-color: #202020;
   color: #FFFFFF;
   font-size: 1rem;
   line-height: 1.5;
@@ -51,9 +52,9 @@ html {
 }
 
 #petal {
-  font-size: 5rem;
-  right: 41px;
-  bottom: 17vh;
+  font-size: 4rem;
+  right: 1vh;
+  bottom: 18vh;
   opacity: 0.3;
   mix-blend-mode: screen;
   position: absolute;
