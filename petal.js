@@ -213,4 +213,16 @@ document.addEventListener('DOMContentLoaded', () => {
   })
 
   server.onmessage = onMessage
+
+  /* auto-login */
+
+  server.onopen = (event) => {
+    if (userData.name !== undefined && userData.token !== undefined) {
+      server.send(JSON.stringify({
+        type: 'auth-token',
+        name: userData.name,
+        token: userData.token
+      }))
+    }
+  }
 })
