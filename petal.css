@@ -56,6 +56,6 @@ html {
   outline: 0;
 }
 
-.client-message {
-  color: #A0A0A0;
+.msg--system {
+  color: #aaaaaa;
 }

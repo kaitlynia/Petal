@@ -31,12 +31,13 @@ document.addEventListener('DOMContentLoaded', () => {
   entry = document.querySelector('#entry')
 
   let controlKeyHeld = false,
-  sanitizeConfig = { ALLOWED_TAGS: ['strong', 'b', 'em', 'i'] },
-  userSettings = {
-    name: localStorage.getItem('name') || 'anon',
-    color: localStorage.getItem('color') || '#A0A0A0',
+  sanitizeConfig = { ALLOWED_TAGS: ['span', 'strong', 'b', 'em', 'i'] },
+  userData = {
+    token: localStorage.getItem('token') || undefined,
+    name: localStorage.getItem('name') || undefined,
+    color: localStorage.getItem('color') || undefined,
     theme: localStorage.getItem('theme') || 'dark',
-    scrollThreshold: 50,
+    scrollThreshold: localStorage.getItem('scrollThreshold') || 50,
   }
 
   const commands = {
@@ -45,19 +46,23 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     name: (args) => {
       if (args) {
-        userSettings.name = args
-        localStorage.setItem('name', userSettings.name)
-        return `your name is now <span style="color:${userSettings.color}">${userSettings.name}</span>`
+        server.send(JSON.stringify({
+          type: 'auth-name',
+          name: DOMPurify.sanitize(args, sanitizeConfig)
+        }))
+      } else {
+        return 'missing required name argument. example: /name cooluser23'
       }
-      return `your name is <span style="color:${userSettings.color}">${userSettings.name}</span>`
     },
     color: (args) => {
       if (args) {
-        userSettings.color = args
-        localStorage.setItem('color', userSettings.color)
-        return `your color is now <span style="color:${userSettings.color}">${userSettings.color}</span>`
+        server.send(JSON.stringify({
+          type: 'command-color',
+          color: DOMPurify.sanitize(args, sanitizeConfig)
+        }))
+      } else {
+        return 'missing required color argument. examples: /color pink, /color #fffaaa, /color rgb(200, 200, 100)'
       }
-      return `your color is <span style="color:${userSettings.color}">${userSettings.color}</span>`
     }
   }
 
@@ -86,10 +91,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // handle command or handle message
         if (commandResult) {
-          appendMessage(`<i class="client-message">${commandResult}</i>`)
+          appendMessage(commandResult, true)
         } else {
           try {
-            server.send(`<span style="color:${userSettings.color}">${userSettings.name}: </span>${cleanContents}`)
+            server.send(JSON.stringify({
+              type: 'message',
+              body: cleanContents
+            }))
           } catch (e) {
             console.log(e)
             server = promptForServer('failed to send message. enter server address')
@@ -122,22 +130,69 @@ document.addEventListener('DOMContentLoaded', () => {
     return cleanContents.trim()
   }
 
-  const appendMessage = (contents) => {
-    let cleanContents = cleanMessage(contents)
+  const appendMessage = (message, system) => {
+    const scrollHeight = messages.scrollHeight
 
-    if (cleanContents !== '') {
-      const scrollHeight = messages.scrollHeight
-    
-      messages.innerHTML += `<p class="msg">${cleanContents}</p>`
+    messages.innerHTML += `<p class="msg${system ? ' msg--system' : ''}">${message}</p>`
 
-      if (messages.clientHeight + messages.scrollTop + userSettings.scrollThreshold >= scrollHeight) {
-        messages.scrollTop = messages.scrollHeight
-      }
+    if (messages.clientHeight + messages.scrollTop + userData.scrollThreshold >= scrollHeight) {
+      messages.scrollTop = messages.scrollHeight
+    }
+  }
+
+  const handleMessage = (payload) => {
+    let cleanBody = cleanMessage(payload.body)
+
+    if (cleanBody !== '') {
+      appendMessage(`<span style="color:${payload.nameColor}">${payload.name}: </span>${cleanBody}`)
     }
   }
 
   const onMessage = (event) => {
-    appendMessage(event.data)
+    const payload = JSON.parse(event.data)
+
+    switch (payload.type) {
+      case 'auth-exists':
+        if (userData.token !== undefined) {
+          appendMessage('name already exists, attempting to log in using the stored token...', true)
+          server.send(JSON.stringify({
+            type: 'auth-token',
+            name: payload.name,
+            token: userData.token
+          }))
+        } else {
+          appendMessage('name already exists, and you have no auth token. try using a different name', true)
+        }
+      case 'auth-new':
+        userData.name = payload.name
+        userData.token = payload.token
+        localStorage.setItem('name', userData.name)
+        localStorage.setItem('token', userData.token)
+        appendMessage('account created. logging in...', true)
+        server.send(JSON.stringify({
+          type: 'auth-token',
+          name: userData.name,
+          token: userData.token
+        }))
+        break
+      case 'auth-ok':
+        appendMessage(`logged in as ${payload.name}`, true)
+        break
+      case 'auth-fail':
+        appendMessage(`login failed. if you believe this is an error, report it to lynn`, true)
+        break
+      case 'message':
+        handleMessage(payload)
+        break
+      case 'command-color-ok':
+        userData.color = payload.color
+        localStorage.setItem('color', userData.color)
+        appendMessage(`color changed to <b style="color:${userData.color}>${userData.color}</b>`, true)
+        break
+      case 'command-color-auth-required':
+        appendMessage('only logged in users can use the /color command. use /name to log in', true)
+        break
+    }
   }
 
   body.addEventListener('keydown', (event) => {
