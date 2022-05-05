@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       server = new WebSocket(__serverAddress)
     } catch (e) {
-      server = promptForServer('cached server address is unavailable. enter server address')
+      server = promptForServer('cached server address is unavailable. enter server address (or leave blank for lynn.fun:8080)')
     }
   }
 
@@ -100,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }))
           } catch (e) {
             console.log(e)
-            server = promptForServer('failed to send message. enter server address')
+            server = promptForServer('failed to send message. enter server address (or leave blank for lynn.fun:8080)')
             server.onmessage = onMessage
           }
         }
