@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let cleanBody = cleanMessage(payload.body)
 
     if (cleanBody !== '') {
-      appendMessage(`<b style="color:${payload.nameColor}">${payload.name}: </span>${cleanBody}`)
+      appendMessage(`<b style="color:${payload.nameColor}">${payload.name}: </b>${cleanBody}`)
     }
   }
 
