@@ -2,7 +2,7 @@
   box-sizing: border-box;
   font-family: sans-serif;
   margin: 0;
-  scrollbar-color: #FFFFFF #202020;
+  scrollbar-color: rgba(128, 128, 128, 0.2) #202020;
   scrollbar-width: 12px;
 }
 
@@ -13,10 +13,10 @@
   background: #202020;
 }
 ::-webkit-scrollbar-thumb {
-  background: #FFFFFF;
+  background: rgba(128, 128, 128, 0.2);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #FFFFFF;
+  background: rgba(128, 128, 128, 0.2);
 }
 
 html {
