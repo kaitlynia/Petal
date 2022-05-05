@@ -1,3 +1,7 @@
+# Project-specific files
+/fullchain.pem
+/privkey.pem
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
