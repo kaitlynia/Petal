@@ -3,11 +3,11 @@
   font-family: sans-serif;
   margin: 0;
   scrollbar-color: #FFFFFF #202020;
-  scrollbar-width: 1rem;
+  scrollbar-width: 12px;
 }
 
 ::-webkit-scrollbar {
-  width: 1rem;
+  width: 12px;
 }
 ::-webkit-scrollbar-track {
   background: #202020;
