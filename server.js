@@ -50,7 +50,7 @@ wss.on('connection', sock => {
         case 'auth-name':
           if (payload.hasOwnProperty('name')) {
             const name = DOMPurify.sanitize(payload.name, sanitizeConfig)
-            if (data.names.hasOwnProperty(name)) {
+            if (data.names.hasOwnProperty(name) || name === 'anon') {
               // name already exists, notify client and optionally request an auth-token reply
               sock.send(JSON.stringify({
                 type: 'auth-exists',
@@ -106,15 +106,15 @@ wss.on('connection', sock => {
           if (payload.hasOwnProperty('body')) {
             all.forEach(s => s.send(JSON.stringify({
               type: 'message',
-              name: sock.name || 'anon',
-              nameColor: sock.nameColor || '#aaaaaa',
+              name: sock.name,
+              nameColor: sock.nameColor,
               body: DOMPurify.sanitize(payload.body, sanitizeConfig)
             })))
           }
           break
         case 'command-color':
           if (payload.hasOwnProperty('color')) {
-            if (sock.name !== undefined) {
+            if (sock.name !== 'anon') {
               const color = DOMPurify.sanitize(payload.color, sanitizeConfig)
               data.nameColors[sock.name] = color
               saveData()
