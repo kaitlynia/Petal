@@ -36,32 +36,57 @@ document.addEventListener('DOMContentLoaded', () => {
     token: localStorage.getItem('token') || undefined,
     name: localStorage.getItem('name') || undefined,
     color: localStorage.getItem('color') || undefined,
+    lastUserMessaged: localStorage.getItem('lastUserMessaged') || undefined,
     theme: localStorage.getItem('theme') || 'dark',
     scrollThreshold: localStorage.getItem('scrollThreshold') || 50,
   }
+  const sanitize = s => DOMPurify.sanitize(s, sanitizeConfig)
 
   const commands = {
     help: () => {
-      appendMessage(`commands: ${Object.keys(commands).join(', ')}`, true)
+      appendMessage(`commands: ${Object.keys(commands).join(', ')}`, 'system')
     },
     name: (args) => {
       if (args) {
         server.send(JSON.stringify({
           type: 'auth-name',
-          name: DOMPurify.sanitize(args, sanitizeConfig)
+          name: sanitize(args)
         }))
       } else {
-        appendMessage('missing required name argument. example: /name cooluser23', true)
+        appendMessage('missing required name argument. example: /name cooluser23', 'system')
       }
     },
     color: (args) => {
       if (args) {
         server.send(JSON.stringify({
           type: 'command-color',
-          color: DOMPurify.sanitize(args, sanitizeConfig)
+          color: sanitize(args)
         }))
       } else {
-        appendMessage('missing required color argument. examples: /color pink, /color #fffaaa, /color rgb(200, 200, 100)', true)
+        appendMessage('missing required color argument. examples: /color pink, /color #fffaaa, /color rgb(200, 200, 100)', 'system')
+      }
+    },
+    w: (args) => {
+      const nameBody = args.split(' ', 2)
+      if (nameBody.length > 1) {
+        server.send(JSON.stringify({
+          type: 'priv-message',
+          name: sanitize(nameBody[0]),
+          body: sanitize(nameBody[1]),
+        }))
+      } else {
+        appendMessage('missing required name and message. example: /w testUser23 hi!', 'system')
+      }
+    },
+    c: (args) => {
+      if (args.length > 1 && userData.lastUserMessaged != undefined) {
+        server.send(JSON.stringify({
+          type: 'priv-message',
+          name: sanitize(userData.lastUserMessaged),
+          body: sanitize(args),
+        }))
+      } else {
+        appendMessage('missing message or no previous recipient. example: /w user23 hi, /c hello again!', 'system')
       }
     }
   }
@@ -73,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (commands.hasOwnProperty(cmd)) {
         commands[cmdArgs[0].slice(1)](cmdArgs.slice(1)[0])
       } else {
-        appendMessage((commandResult, true)`unknown command: ${cmd}`, true)
+        appendMessage((commandResult, true)`unknown command: ${cmd}`, 'system')
       }
       return true
     }
@@ -113,20 +138,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  const cleanMessage = (contents) => {
-    const cleanContents = contents
+  const cleanMessage = (rawContents) => {
+    let contents = rawContents
 
-    if (cleanContents instanceof Blob) {
+    if (contents instanceof Blob) {
       const reader = new FileReader()
 
       reader.onload = () => {
-        cleanContents = DOMPurify.sanitize(reader.result, sanitizeConfig)
+        contents = reader.result
       }
 
       reader.readAsText(contents)
     }
 
-    return cleanContents.trim()
+    return sanitize(contents).trim()
   }
 
   const appendMessage = (message, type) => {
@@ -137,12 +162,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (messages.clientHeight + messages.scrollTop + userData.scrollThreshold >= scrollHeight) {
       messages.scrollTop = messages.scrollHeight
     }
-  }
-
-  const handlePrivateMessage = (payload) => {
-    let cleanBody = cleanMessage(payload.body)
-
-
   }
 
   const handleMessage = (payload) => {
@@ -193,10 +212,14 @@ document.addEventListener('DOMContentLoaded', () => {
         break
       case 'priv-message':
         handleMessage(payload)
+        break
       case 'priv-message-sent':
+        localStorage.setItem('lastUserMessaged', payload.name)
         handleMessage(payload)
+        break
       case 'priv-message-fail':
         appendMessage(`private message could not be sent to <b>${payload.name}</b>. did they change their name?`, 'system')
+        break
       case 'message':
         handleMessage(payload)
         break
