@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
           name: sanitize(args)
         }))
       } else {
-        appendMessage('missing required name argument. example: /name cooluser23', 'system')
+        appendMessage('missing name. example: /name cooluser23', 'system')
       }
     },
     color: (args) => {
@@ -63,19 +63,20 @@ document.addEventListener('DOMContentLoaded', () => {
           color: sanitize(args)
         }))
       } else {
-        appendMessage('missing required color argument. examples: /color pink, /color #fffaaa, /color rgb(200, 200, 100)', 'system')
+        appendMessage('missing color. examples: /color pink, /color #fffaaa, /color rgb(200, 200, 100)', 'system')
       }
     },
     w: (args) => {
-      const nameBody = args.split(' ', 2)
-      if (nameBody.length > 1) {
+      const spaceIndex = args.search(' ')
+      const body = args.slice(spaceIndex)
+      if (spaceIndex != -1 && body.length > 0) {
         server.send(JSON.stringify({
           type: 'priv-message',
-          name: sanitize(nameBody[0]),
-          body: sanitize(nameBody[1]),
+          name: sanitize(args.slice(0, spaceIndex)),
+          body: sanitize(body),
         }))
       } else {
-        appendMessage('missing required name and message. example: /w testUser23 hi!', 'system')
+        appendMessage('missing name and message. example: /w testUser23 hi!', 'system')
       }
     },
     c: (args) => {
@@ -93,10 +94,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const tryCommand = (contents) => {
     if (contents.charAt(0) === '/') {
-      const cmdArgs = contents.split(' ', 2)
-      const cmd = cmdArgs[0].slice(1)
+      const spaceIndex = contents.search(' ')
+      const cmd = contents.slice(1, spaceIndex)
       if (commands.hasOwnProperty(cmd)) {
-        commands[cmdArgs[0].slice(1)](cmdArgs.slice(1)[0])
+        commands[cmd](spaceIndex != -1 ? contents.slice(spaceIndex + 1) : null)
       } else {
         appendMessage((commandResult, true)`unknown command: ${cmd}`, 'system')
       }
