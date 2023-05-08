@@ -95,11 +95,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const tryCommand = (contents) => {
     if (contents.charAt(0) === '/') {
       const spaceIndex = contents.search(' ')
-      const cmd = contents.slice(1, spaceIndex)
+      const cmd = contents.slice(0, spaceIndex)
       if (commands.hasOwnProperty(cmd)) {
         commands[cmd](spaceIndex != -1 ? contents.slice(spaceIndex + 1) : null)
       } else {
-        appendMessage((commandResult, true)`unknown command: ${cmd}`, 'system')
+        appendMessage(`unknown command: ${cmd}`, 'system')
       }
       return true
     }
