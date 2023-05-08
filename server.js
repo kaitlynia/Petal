@@ -9,8 +9,7 @@ const window = new JSDOM('').window
 const DOMPurify = createDOMPurify(window)
 const https_key = fs.readFileSync('./privkey.pem', 'utf8')
 const https_cert = fs.readFileSync('./fullchain.pem', 'utf8')
-const https_server_options = { key: https_key, cert: https_cert }
-const https_server = https.createServer(https_server_options)
+const https_server = https.createServer({ key: https_key, cert: https_cert })
 const dataPath = './data.json'
 https_server.listen(8080)
 
@@ -19,6 +18,7 @@ const wss = new WSServer({
 })
 
 const sanitizeConfig = { ALLOWED_TAGS: ['span', 'strong', 'b', 'em', 'i'], ALLOWED_ATTR: [] }
+const sanitize = s => DOMPurify.sanitize(s, sanitizeConfig)
 
 /*
 if (data.names.hasOwnProperty(name)) {
@@ -49,7 +49,7 @@ wss.on('connection', sock => {
       switch (payload.type) {
         case 'auth-name':
           if (payload.hasOwnProperty('name')) {
-            const name = DOMPurify.sanitize(payload.name, sanitizeConfig)
+            const name = sanitize(payload.name)
             if (data.names.hasOwnProperty(name) || name === 'anon') {
               // name already exists, notify client and optionally request an auth-token reply
               sock.send(JSON.stringify({
@@ -71,7 +71,7 @@ wss.on('connection', sock => {
           break
         case 'auth-token':
           if (payload.hasOwnProperty('name') && payload.hasOwnProperty('token')) {
-            const name = DOMPurify.sanitize(payload.name, sanitizeConfig)
+            const name = sanitize(payload.name)
             if (data.names.hasOwnProperty(name)) {
               if (data.names[name] === payload.token) {
                 sock.name = name
@@ -104,20 +104,46 @@ wss.on('connection', sock => {
             }))
           }
           break
+        case 'priv-message':
+          if (payload.hasOwnProperty('body') && payload.hasOwnProperty('name')) {
+            const name = sanitize(payload.name)
+            const user = all.find(s => s.name == name)
+            if (user !== undefined) {
+              const body = sanitize(payload.body)
+              user.send(JSON.stringify({
+                type: 'priv-message',
+                name: sock.name,
+                nameColor: sock.nameColor,
+                body: body
+              }))
+              sock.send(JSON.stringify({
+                type: 'priv-message-sent',
+                name: name,
+                nameColor: sock.nameColor,
+                body: body
+              }))
+            } else {
+              sock.send(JSON.stringify({
+                type: 'priv-message-fail',
+                name: name,
+              }))
+            }
+          }
+          break
         case 'message':
           if (payload.hasOwnProperty('body')) {
             all.forEach(s => s.send(JSON.stringify({
               type: 'message',
               name: sock.name,
               nameColor: sock.nameColor,
-              body: DOMPurify.sanitize(payload.body, sanitizeConfig)
+              body: sanitize(payload.body)
             })))
           }
           break
         case 'command-color':
           if (payload.hasOwnProperty('color')) {
             if (sock.name !== 'anon') {
-              const color = DOMPurify.sanitize(payload.color, sanitizeConfig)
+              const color = sanitize(payload.color)
               sock.nameColor = color
               data.nameColors[sock.name] = color
               saveData()

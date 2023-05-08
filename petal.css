@@ -2,6 +2,8 @@
   --dark: #202020;
   --grey: rgba(128, 128, 128, 0.2);
   --system-message: #aaaaaa;
+  --priv-message: #e8f1b1;
+  --priv-message-sent: #96c1f1;
   --small: 12px;
   --medium: 24px;
   --large: 36px;
@@ -98,6 +100,12 @@ html {
 
 .msg--system {
   color: var(--system-message);
+}
+.msg--priv-message {
+  color: var(--priv-message);
+}
+.msg--priv-message-sent {
+  color: var(--priv-message-sent);
 }
 
 @media (max-width: 1200px) {

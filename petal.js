@@ -129,21 +129,34 @@ document.addEventListener('DOMContentLoaded', () => {
     return cleanContents.trim()
   }
 
-  const appendMessage = (message, system) => {
+  const appendMessage = (message, type) => {
     const scrollHeight = messages.scrollHeight
 
-    messages.innerHTML += `<p class="msg${system ? ' msg--system' : ''}">${message}</p>`
+    messages.innerHTML += `<p class="msg${type != 'message' ? ' msg--' + type : ''}">${message}</p>`
 
     if (messages.clientHeight + messages.scrollTop + userData.scrollThreshold >= scrollHeight) {
       messages.scrollTop = messages.scrollHeight
     }
   }
 
+  const handlePrivateMessage = (payload) => {
+    let cleanBody = cleanMessage(payload.body)
+
+
+  }
+
   const handleMessage = (payload) => {
     let cleanBody = cleanMessage(payload.body)
 
     if (cleanBody !== '') {
-      appendMessage(`<b style="color:${payload.nameColor}">${payload.name}: </b>${cleanBody}`)
+      switch (payload.type) {
+        case 'message':
+          appendMessage(`<b style="color:${payload.nameColor}">${payload.name}</b>: ${cleanBody}`, payload.type)
+        case 'priv-message':
+          appendMessage(`⮜ <b style="color:${payload.nameColor}">${payload.name}</b>: ${cleanBody}`, payload.type)
+        case 'priv-message-sent':
+          appendMessage(`<b style="color:${userData.color}">${userData.name}</b> ⮞ <b>${payload.name}</b>: ${cleanBody}`, payload.type)
+      }
     }
   }
 
@@ -153,14 +166,14 @@ document.addEventListener('DOMContentLoaded', () => {
     switch (payload.type) {
       case 'auth-exists':
         if (userData.token !== undefined) {
-          appendMessage('name already exists, attempting to log in using the stored token...', true)
+          appendMessage('name already exists, attempting to log in using the stored token...', 'system')
           server.send(JSON.stringify({
             type: 'auth-token',
             name: payload.name,
             token: userData.token
           }))
         } else {
-          appendMessage('name already exists, and you have no auth token. try using a different name', true)
+          appendMessage('name already exists, and you have no auth token. try using a different name', 'system')
         }
       case 'auth-new':
         userData.name = payload.name
@@ -173,21 +186,27 @@ document.addEventListener('DOMContentLoaded', () => {
       case 'auth-ok':
         localStorage.setItem('name', userData.name)
         localStorage.setItem('token', userData.token)
-        appendMessage(`logged in as <b style="color:${payload.nameColor}">${payload.name}</b>`, true)
+        appendMessage(`logged in as <b style="color:${payload.nameColor}">${payload.name}</b>`, 'system')
         break
       case 'auth-fail':
-        appendMessage(`login failed. if you believe this is an error, report it to lynn`, true)
+        appendMessage(`login failed. if you believe this is an error, report it to lynn`, 'system')
         break
+      case 'priv-message':
+        handleMessage(payload)
+      case 'priv-message-sent':
+        handleMessage(payload)
+      case 'priv-message-fail':
+        appendMessage(`private message could not be sent to <b>${payload.name}</b>. did they change their name?`, 'system')
       case 'message':
         handleMessage(payload)
         break
       case 'command-color-ok':
         userData.color = payload.color
         localStorage.setItem('color', userData.color)
-        appendMessage(`color changed to <b style="color:${userData.color}">${userData.color}</b>`, true)
+        appendMessage(`color changed to <b style="color:${userData.color}">${userData.color}</b>`, 'system')
         break
       case 'command-color-auth-required':
-        appendMessage('only logged in users can use the /color command. use /name to log in', true)
+        appendMessage('only logged in users can use the /color command. use /name to log in', 'system')
         break
     }
   }
