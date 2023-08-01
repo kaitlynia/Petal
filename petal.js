@@ -53,10 +53,10 @@ document.addEventListener('DOMContentLoaded', () => {
           appendMessage(`<b style="color:${payload.nameColor}">${payload.name}</b>: ${cleanBody}`, payload.type)
           break
         case 'priv-message':
-          appendMessage(`⮜ <b style="color:${payload.nameColor}">${payload.name}</b>: ${cleanBody}`, payload.type)
+          appendMessage(`← <b style="color:${payload.nameColor}">${payload.name}</b>: ${cleanBody}`, payload.type)
           break
         case 'priv-message-sent':
-          appendMessage(`⮞ <b>${payload.name}</b>: ${cleanBody}`, payload.type)
+          appendMessage(`→ <b>${payload.name}</b>: ${cleanBody}`, payload.type)
           break
       }
     }
