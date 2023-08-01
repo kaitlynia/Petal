@@ -179,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const commands = {
     server: (args) => {
       if (args) {
-        if (server.hasOwnProperty('readyState')) {
+        if (server && server.hasOwnProperty('readyState')) {
           // connecting or open
           if (server.readyState <= 1) {
             server.onclose = event => {
