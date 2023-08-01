@@ -43,6 +43,7 @@ wss.on('connection', sock => {
   sock.nameColor = '#aaaaaa'
 
   sock.on('message', msg => {
+    console.log(JSON.parse(msg))
     const payload = JSON.parse(msg)
 
     if (payload.hasOwnProperty('type')) {
@@ -51,7 +52,7 @@ wss.on('connection', sock => {
           if (payload.hasOwnProperty('name')) {
             const name = sanitize(payload.name)
             if (data.names.hasOwnProperty(name) || name === 'anon') {
-              // name already exists, notify client and optionally request an auth-token reply
+              // name already exists, notify client
               sock.send(JSON.stringify({
                 type: 'auth-exists',
                 name: name
@@ -98,9 +99,8 @@ wss.on('connection', sock => {
 
             saveData()
             sock.send(JSON.stringify({
-              type: 'auth-ok',
-              name: sock.name,
-              nameColor: data.nameColors[sock.name] || '#aaaaaa'
+              type: 'auth-new-ok',
+              name: sock.name
             }))
           }
           break

@@ -1,9 +1,9 @@
 :root {
   --dark: #202020;
-  --grey: rgba(128, 128, 128, 0.2);
+  --grey: rgba(128, 128, 128, 0.4);
   --system-message: #aaaaaa;
   --priv-message: #e8f1b1;
-  --priv-message-sent: #96c1f1;
+  --priv-message-sent: #aaaaaa;
   --small: 12px;
   --medium: 24px;
   --large: 36px;
@@ -23,10 +23,7 @@
 ::-webkit-scrollbar-track {
   background: var(--dark);
 }
-::-webkit-scrollbar-thumb {
-  background: var(--grey);
-}
-::-webkit-scrollbar-thumb:hover {
+::-webkit-scrollbar-thumb, ::-webkit-scrollbar-thumb:hover {
   background: var(--grey);
 }
 
@@ -35,23 +32,19 @@ html {
 }
 
 #main {
+  align-items: center;
   background-color: var(--dark);
   display: flex;
   height: 100vh;
   justify-content: space-between;
-  align-items: center;
   padding: var(--large);
 }
 
-#player {
-  border: 0;
-}
-
 #chat {
-  height: 774px;
-  min-width: 440px;
-  padding-left: var(--medium);
+  height: 100%;
+  max-width: 880px;
   position: relative;
+  width: 100%;
 }
 
 #chat, #entry, #messages {
@@ -65,9 +58,9 @@ html {
 
 #petal {
   font-size: 4rem;
-  right: 10px;
-  bottom: 110px;
-  opacity: 0.3;
+  right: 0.5rem;
+  bottom: 6rem;
+  opacity: 0.4;
   mix-blend-mode: screen;
   position: absolute;
   user-select: none;
@@ -106,36 +99,4 @@ html {
 }
 .msg--priv-message-sent {
   color: var(--priv-message-sent);
-}
-
-@media (max-width: 1200px) {
-  #main {
-    flex-direction: column;
-    padding: unset;
-  }
-
-  #player {
-    width: 100%;
-  }
-
-  #chat {
-    min-width: unset;
-    max-height: 800px;
-    padding-left: unset;
-    padding: var(--medium);
-    width: 100%;
-  }
-
-  #messages {
-    height: 36vh;
-  }
-
-  #entry {
-    height: 10vh;
-  }
-
-  #petal {
-    bottom: 12.5vh;
-    right: 28px;
-  }
 }
