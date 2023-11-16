@@ -187,25 +187,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      if (server && server.hasOwnProperty('readyState')) {
+      if (server && server.readyState < 3) {
         // connecting or open
-        if (server.readyState <= 1) {
-          server.onclose = event => {
-            events.onclose(event)
-            server = connect(dest)
-          }
-          server.close()
-        // closing
-        } else if (server.readyState == 2) {
-          server.onclose = event => {
-            events.onclose(event)
-            server = connect(dest)
-          }
-        // closed
-        } else {
+        server.onclose = event => {
+          events.onclose(event)
           server = connect(dest)
         }
-      // unopened (first connection attempt)
+        // close if not already closing
+        if (server.readyState != 2) {
+          server.close()
+        }
+      // unopened or closed (!server || readyState == 3)
       } else {
         server = connect(dest)
       }
