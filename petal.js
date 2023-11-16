@@ -75,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const events = {
     onerror: event => {
       if (userData.logConnectionEvents) {
-        appendMessage(`failed to connect to ${cleanURL(server.url)}. use /server <url> to retry or connect to a new server`, 'system')
+        appendMessage(`failed to connect to ${cleanURL(server.url)}. use /connect to retry or /connect <url>`, 'system')
       }
     },
     onclose: event => {
@@ -177,32 +177,37 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const commands = {
-    server: (args) => {
-      if (args) {
-        if (server && server.hasOwnProperty('readyState')) {
-          // connecting or open
-          if (server.readyState <= 1) {
-            server.onclose = event => {
-              events.onclose(event)
-              server = connect(args)
-            }
-            server.close()
-          // closing
-          } else if (server.readyState == 2) {
-            server.onclose = event => {
-              events.onclose(event)
-              server = connect(args)
-            }
-          // closed
-          } else {
-            server = connect(args)
-          }
-        // unopened (first connection attempt)
+    connect: (args) => {
+      let dest = args
+      if (!dest) {
+        if (userData.server != undefined) {
+          dest = userData.server
         } else {
-          server = connect(args)
+          return appendMessage('missing server url. example: /connect lynn.fun', 'system')
         }
+      }
+
+      if (server && server.hasOwnProperty('readyState')) {
+        // connecting or open
+        if (server.readyState <= 1) {
+          server.onclose = event => {
+            events.onclose(event)
+            server = connect(dest)
+          }
+          server.close()
+        // closing
+        } else if (server.readyState == 2) {
+          server.onclose = event => {
+            events.onclose(event)
+            server = connect(dest)
+          }
+        // closed
+        } else {
+          server = connect(dest)
+        }
+      // unopened (first connection attempt)
       } else {
-        appendMessage('missing server url. example: /server example.com', 'system')
+        server = connect(dest)
       }
     },
     help: () => {
@@ -293,7 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }))
           } catch (e) {
             console.log(e)
-            appendMessage(`failed to send message. use /server ${userData.server} to reconnect or try to connect to a new server.`, 'system')
+            appendMessage('failed to send message. use /connect to reconnect or /connect <url>', 'system')
           }
         }
       }
@@ -330,6 +335,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (userData.server !== undefined) {
     server = connect(userData.server)
   } else {
-    appendMessage('welcome to Petal! use /server <url> to connect to a server.', 'system')
+    appendMessage('welcome to Petal! use /connect <url> to connect to a server. (try lynn.fun!)', 'system')
   }
 })
