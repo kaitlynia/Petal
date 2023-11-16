@@ -166,8 +166,6 @@ document.addEventListener('DOMContentLoaded', () => {
       url = url.concat(':8080')
     }
 
-    console.log(url)
-
     if (userData.logConnectionEvents) {
       appendMessage(`connecting to ${cleanURL(url)}...`, 'system')
     }
@@ -211,8 +209,14 @@ document.addEventListener('DOMContentLoaded', () => {
           type: 'auth-name',
           name: sanitize(args)
         }))
+      } else if (userData.name !== undefined) {
+        if (userData.color !== undefined) {
+          appendMessage(`your name is <b style="color:${userData.color}">${userData.name}</b>`, 'system')
+        } else {
+          appendMessage(`your name is <b>${userData.name}</b>`, 'system')
+        }
       } else {
-        appendMessage('missing name. example: /name cooluser23', 'system')
+        appendMessage('you have the default name. use /name <name> to set one', 'system')
       }
     },
     color: (args) => {
@@ -221,8 +225,10 @@ document.addEventListener('DOMContentLoaded', () => {
           type: 'command-color',
           color: sanitize(args)
         }))
+      } else if (userData.color !== undefined) {
+        appendMessage(`your name color is <b style="color:${userData.color}">${userData.color}</b>`, 'system')
       } else {
-        appendMessage('missing color. examples: /color pink, /color #fffaaa, /color rgb(200, 200, 100)', 'system')
+        appendMessage('you have the default name color. use /color <color> to set one', 'system')
       }
     },
     w: (args) => {
