@@ -76,7 +76,7 @@ html {
 
 #entry {
   border: 2px solid var(--grey);
-  height: 15%;
+  height: max(15%, 3rem);
   margin: 0;
   padding: var(--small) 16px;
   resize: none;
