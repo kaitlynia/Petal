@@ -59,7 +59,7 @@ html {
 #petal {
   font-size: 4rem;
   right: 0.5rem;
-  bottom: 6rem;
+  bottom: 15%;
   opacity: 0.4;
   mix-blend-mode: screen;
   position: absolute;
