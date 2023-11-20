@@ -18,14 +18,25 @@ document.addEventListener('DOMContentLoaded', () => {
     logConnectionEvents: localStorage.getItem('logConnectionEvents') || true,
   }
 
-  const appendMessage = (message, type) => {
+  const validName = s => !/[^0-9a-z]/i.test(s)
+  const validColor = s => {
+    const style = new Option().style
+    style.color = s
+    return !['unset', 'initial', 'inherit', ''].includes(style.color)
+  }
+
+  const appendMessage = (message, type='message') => {
     const scrollHeight = messages.scrollHeight
 
-    messages.innerHTML += `<p class="msg${type != 'message' ? ' msg--' + type : ''}">${message}</p>`
+    messages.innerHTML += `<p class="msg${type !== 'message' ? ' msg--' + type : ''}">${message}</p>`
 
     if (messages.clientHeight + messages.scrollTop + userData.scrollThreshold >= scrollHeight) {
       messages.scrollTop = messages.scrollHeight
     }
+  }
+
+  const appendSystemMessage = (message) => {
+    appendMessage(message, 'system')
   }
 
   const cleanMessage = (rawContents) => {
@@ -44,24 +55,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return sanitize(contents).trim()
   }
 
-  const handleMessage = (payload) => {
-    let cleanBody = cleanMessage(payload.body)
-
-    if (cleanBody !== '') {
-      switch (payload.type) {
-        case 'message':
-          appendMessage(`<b style="color:${payload.nameColor}">${payload.name}</b>: ${cleanBody}`, payload.type)
-          break
-        case 'priv-message':
-          appendMessage(`← <b style="color:${payload.nameColor}">${payload.name}</b>: ${cleanBody}`, payload.type)
-          break
-        case 'priv-message-sent':
-          appendMessage(`→ <b>${payload.name}</b>: ${cleanBody}`, payload.type)
-          break
-      }
-    }
-  }
-
   const cleanURL = url => {
     url = url.replace('wss://', '').replace(':8080', '')
     return url.endsWith('/') ? url.slice(0, -1) : url
@@ -72,88 +65,107 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem(key, val)
   }
 
+  const send = payload => server.send(JSON.stringify(payload))
+
+  const payloadHandlers = {
+    'auth-exists': payload => {
+      if (userData.token !== undefined) {
+        appendSystemMessage('name already exists, attempting to log in using the stored token...')
+        send({
+          type: 'auth-token',
+          name: payload.name,
+          token: userData.token
+        })
+      } else {
+        appendSystemMessage('name already exists, and you have no auth token. try using a different name')
+      }
+    },
+    'auth-name-invalid': payload => {
+      appendSystemMessage('invalid name. only letters and numbers are allowed.')
+    },
+    'auth-new': payload => {
+      userData.name = payload.name
+      userData.token = payload.token
+      appendSystemMessage('account created. logging in...')
+      send({
+        type: 'auth-recv'
+      })
+    },
+    'auth-new-ok': payload => {
+      localStorage.setItem('name', userData.name)
+      localStorage.setItem('token', userData.token)
+      appendSystemMessage(`logged in as <b>${payload.name}</b>`)
+    },
+    'auth-ok': payload => {
+      appendSystemMessage(`logged in as <b style="color:${payload.nameColor}">${payload.name}</b>`)
+    },
+    'auth-fail': payload => {
+      appendSystemMessage(`login failed. if you believe this is an error, report it to lynn`)
+    },
+    'priv-message': payload => {
+      const cleanBody = sanitize(payload.body)
+      if (cleanBody !== '') {
+        appendMessage(`← <b style="color:${payload.nameColor}">${payload.name}</b>: ${cleanBody}`, payload.type)
+      }
+    },
+    'priv-message-sent': payload => {
+      setUserData('lastUserMessaged', payload.name)
+      const cleanBody = sanitize(payload.body)
+      if (cleanBody !== '') {
+        appendMessage(`→ <b>${payload.name}</b>: ${cleanBody}`, payload.type)
+      }
+    },
+    'priv-message-fail': payload => {
+      appendSystemMessage(`message could not be sent to <b>${payload.name}</b>. did they change their name?`)
+    },
+    'message': payload => {
+      setUserData('lastUserMessaged', payload.name)
+      const cleanBody = sanitize(payload.body)
+      if (cleanBody !== '') {
+          appendMessage(`<b style="color:${payload.nameColor}">${payload.name}</b>: ${cleanBody}`, payload.type)
+      }
+    },
+    'command-color-ok': payload => {
+      setUserData('color', payload.color)
+      appendSystemMessage(`color changed to <b style="color:${userData.color}">${userData.color}</b>`)
+    },
+    'command-color-invalid': payload => {
+      appendSystemMessage('invalid color. examples: #ff9999, rgb(127, 127, 255), yellow')
+    },
+    'command-color-auth-required': payload => {
+      appendSystemMessage('only logged in users can use the /color command. use /name to log in')
+    },
+  }
+
   const events = {
     onerror: event => {
       if (userData.logConnectionEvents) {
-        appendMessage(`failed to connect to ${cleanURL(server.url)}. use /connect to retry or /connect <url>`, 'system')
+        appendSystemMessage(`failed to connect to ${cleanURL(server.url)}. use /connect to retry or /connect <url>`)
       }
     },
     onclose: event => {
       if (userData.logConnectionEvents) {
-        appendMessage(`connection to ${cleanURL(server.url)} closed`, 'system')
+        appendSystemMessage(`connection to ${cleanURL(server.url)} closed`)
       }
     },
     onopen: event => {
       if (userData.logConnectionEvents) {
-        appendMessage(`connected to ${cleanURL(server.url)}`, 'system')
+        appendSystemMessage(`connected to ${cleanURL(server.url)}`)
       }
 
       setUserData('server', server.url)
 
       if (userData.name !== undefined && userData.token !== undefined) {
-        server.send(JSON.stringify({
+        send({
           type: 'auth-token',
           name: userData.name,
           token: userData.token
-        }))
+        })
       }
     },
     onmessage: event => {
       const payload = JSON.parse(event.data)
-
-      switch (payload.type) {
-        case 'auth-exists':
-          if (userData.token !== undefined) {
-            appendMessage('name already exists, attempting to log in using the stored token...', 'system')
-            server.send(JSON.stringify({
-              type: 'auth-token',
-              name: payload.name,
-              token: userData.token
-            }))
-          } else {
-            appendMessage('name already exists, and you have no auth token. try using a different name', 'system')
-          }
-          break
-        case 'auth-new':
-          userData.name = payload.name
-          userData.token = payload.token
-          appendMessage('account created. logging in...', true)
-          server.send(JSON.stringify({
-            type: 'auth-recv'
-          }))
-          break
-        case 'auth-new-ok':
-          localStorage.setItem('name', userData.name)
-          localStorage.setItem('token', userData.token)
-          appendMessage(`logged in as <b>${payload.name}</b>`, 'system')
-          break
-        case 'auth-ok':
-          appendMessage(`logged in as <b style="color:${payload.nameColor}">${payload.name}</b>`, 'system')
-          break
-        case 'auth-fail':
-          appendMessage(`login failed. if you believe this is an error, report it to lynn`, 'system')
-          break
-        case 'priv-message':
-          handleMessage(payload)
-          break
-        case 'priv-message-sent':
-          setUserData('lastUserMessaged', payload.name)
-          handleMessage(payload)
-          break
-        case 'priv-message-fail':
-          appendMessage(`message could not be sent to <b>${payload.name}</b>. did they change their name?`, 'system')
-          break
-        case 'message':
-          handleMessage(payload)
-          break
-        case 'command-color-ok':
-          setUserData('color', payload.color)
-          appendMessage(`color changed to <b style="color:${userData.color}">${userData.color}</b>`, 'system')
-          break
-        case 'command-color-auth-required':
-          appendMessage('only logged in users can use the /color command. use /name to log in', 'system')
-          break
-      }
+      payloadHandlers[payload.type](payload)
     }
   }
 
@@ -167,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (userData.logConnectionEvents) {
-      appendMessage(`connecting to ${cleanURL(url)}...`, 'system')
+      appendSystemMessage(`connecting to ${cleanURL(url)}...`)
     }
     server = new WebSocket(url)
     Object.assign(server, events)
@@ -181,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (userData.server != undefined) {
           dest = userData.server
         } else {
-          return appendMessage('missing server url. example: /connect lynn.fun', 'system')
+          return appendSystemMessage('missing server url. example: /connect lynn.fun')
         }
       }
 
@@ -201,34 +213,42 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     },
     help: () => {
-      appendMessage(`commands: ${Object.keys(commands).join(', ')}`, 'system')
+      appendSystemMessage(`commands: ${Object.keys(commands).join(', ')}`)
     },
     name: (args) => {
       if (args) {
-        server.send(JSON.stringify({
-          type: 'auth-name',
-          name: sanitize(args)
-        }))
+        if (validName(args)) {
+          send({
+            type: 'auth-name',
+            name: args
+          })
+        } else {
+          payloadHandlers['auth-name-invalid']()
+        }
       } else if (userData.name !== undefined) {
         if (userData.color !== undefined) {
-          appendMessage(`your name is <b style="color:${userData.color}">${userData.name}</b>`, 'system')
+          appendSystemMessage(`your name is <b style="color:${userData.color}">${userData.name}</b>`)
         } else {
-          appendMessage(`your name is <b>${userData.name}</b>`, 'system')
+          appendSystemMessage(`your name is <b>${userData.name}</b>`)
         }
       } else {
-        appendMessage('you have the default name. use /name <name> to set one', 'system')
+        appendSystemMessage('you have the default name. use /name <name> to set one')
       }
     },
     color: (args) => {
       if (args) {
-        server.send(JSON.stringify({
-          type: 'command-color',
-          color: sanitize(args)
-        }))
+        if (validColor(args)) {
+          send({
+            type: 'command-color',
+            color: args
+          })
+        } else {
+          payloadHandlers['command-color-invalid']()
+        }
       } else if (userData.color !== undefined) {
-        appendMessage(`your name color is <b style="color:${userData.color}">${userData.color}</b>`, 'system')
+        appendSystemMessage(`your name color is <b style="color:${userData.color}">${userData.color}</b>`)
       } else {
-        appendMessage('you have the default name color. use /color <color> to set one', 'system')
+        appendSystemMessage('you have the default name color. use /color <color> to set one')
       }
     },
     w: (args) => {
@@ -236,29 +256,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const spaceIndex = args.search(' ')
         const body = args.slice(spaceIndex)
         if (spaceIndex != -1 && body.length > 0) {
-          server.send(JSON.stringify({
+          send({
             type: 'priv-message',
-            name: sanitize(args.slice(0, spaceIndex)),
+            name: args.slice(0, spaceIndex),
             body: sanitize(body),
-          }))
+          })
         } else {
-          appendMessage('missing message content. example: /w exampleUser23 hi!', 'system')
+          appendSystemMessage('missing message content. example: /w exampleUser23 hi!')
         }
       } else {
-        appendMessage('missing name and message. example: /w exampleUser23 hi!', 'system')
+        appendSystemMessage('missing name and message. example: /w exampleUser23 hi!')
       }
     },
     c: (args) => {
       if (userData.lastUserMessaged == undefined) {
-        appendMessage('no previous recipient. example: /w exampleUser23 hi, /c hello again!', 'system')
+        appendSystemMessage('no previous recipient. example: /w exampleUser23 hi, /c hello again!')
       } else if (args && args.length > 1) {
-        server.send(JSON.stringify({
+        send({
           type: 'priv-message',
-          name: sanitize(userData.lastUserMessaged),
+          name: userData.lastUserMessaged,
           body: sanitize(args),
-        }))
+        })
       } else {
-        appendMessage('missing message. example: /w exampleUser23 hi, /c hello again!', 'system')
+        appendSystemMessage('missing message. example: /w exampleUser23 hi, /c hello again!')
       }
     }
   }
@@ -270,7 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (commands.hasOwnProperty(cmd)) {
         commands[cmd](spaceIndex != -1 ? contents.slice(spaceIndex + 1) : null)
       } else {
-        appendMessage(`unknown command: ${cmd}`, 'system')
+        appendSystemMessage(`unknown command: ${cmd}`)
       }
       return true
     }
@@ -290,13 +310,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!wasCommand) {
           try {
-            server.send(JSON.stringify({
+            send({
               type: 'message',
               body: cleanContents
-            }))
+            })
           } catch (e) {
             console.log(e)
-            appendMessage('failed to send message. use /connect to reconnect or /connect <url>', 'system')
+            appendSystemMessage('failed to send message. use /connect to reconnect or /connect <url>')
           }
         }
       }
@@ -333,6 +353,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (userData.server !== undefined) {
     server = connect(userData.server)
   } else {
-    appendMessage('welcome to Petal! use /connect <url> to connect to a server. (try lynn.fun!)', 'system')
+    appendSystemMessage('welcome to Petal! use /connect <url> to connect to a server. (try lynn.fun!)')
   }
 })
