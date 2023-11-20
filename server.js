@@ -41,6 +41,34 @@ const saveData = () => {
   fs.writeFileSync(dataPath, JSON.stringify(data))
 }
 
+const authToken = (sock, token, name, newName=false) => {
+  const names = data.tokenNames[token]
+  if (newName && names.length === 10) {
+    sock.send(JSON.stringify({
+      type: 'auth-fail-max-names'
+    }))
+  } else if (names !== undefined && (names.includes(name) || newName)) {
+    sock.token = token
+    sock.name = name
+    sock.nameColor = data.nameColor[name] || '#aaaaaa'
+    if (newAuth) {
+      data.nameToken[name] = token
+      names.append(sock.name)
+      saveData()
+    }
+    sock.send(JSON.stringify({
+      type: 'auth-ok',
+      name: sock.name,
+      nameColor: sock.nameColor
+    }))
+  } else {
+    sock.send(JSON.stringify({
+      type: 'auth-fail-not-found'
+    }))
+  }
+}
+
+
 let socks = new Set()
 wss.on('connection', sock => {
   socks.add(sock)
@@ -62,15 +90,19 @@ wss.on('connection', sock => {
               name: payload.name
             })
           } else if (validName(payload.name)) {
-            sock.auth_pair = {
-              name: payload.name,
-              token: crypto.randomUUID()
+            if (sock.token !== undefined) {
+              authToken(sock, sock.token, payload.name, true)
+            } else {
+              sock.auth_pair = {
+                name: payload.name,
+                token: crypto.randomUUID()
+              }
+              send({
+                type: 'auth-new',
+                name: payload.name,
+                token: sock.auth_pair.token
+              })
             }
-            send({
-              type: 'auth-new',
-              name: payload.name,
-              token: sock.auth_pair.token
-            })
           } else {
             send({
               type: 'auth-name-invalid'
@@ -78,31 +110,23 @@ wss.on('connection', sock => {
           }
           break
         case 'auth-token':
-          const names = data.tokenNames[payload.token]
-          if (names !== undefined && names.includes(payload.name)) {
-            sock.name = payload.name
-            sock.nameColor = data.nameColor[payload.name] || '#aaaaaa'
-            send({
-              type: 'auth-ok',
-              name: sock.name,
-              nameColor: sock.nameColor
-            })
-          } else {
-            send({
-              type: 'auth-fail'
-            })
-          }
+          authToken(sock, payload.token, payload.name)
           break
         case 'auth-recv':
           if (sock.auth_pair !== undefined) {
             sock.name = sock.auth_pair.name
-            data.names[sock.auth_pair.name] = sock.auth_pair.token
-            sock.auth_pair = undefined
+            data.nameToken[sock.name] = sock.auth_pair.token
+            data.tokenNames[sock.auth_pair.token] = [sock.name]
+            delete sock.auth_pair
 
             saveData()
             send({
               type: 'auth-new-ok',
               name: sock.name
+            })
+          } else {
+            send({
+              type: 'auth-fail-unknown'
             })
           }
           break
@@ -172,53 +196,3 @@ wss.on('connection', sock => {
     socks.delete(sock)
   })
 })
-
-/*
-
-client <auth-name> <name> -> server
-
-server: '<name>' exists?
-
-yes:
-  server <auth-exists>
-  client <auth-token> <name> <token>
-
-  match:
-    server <auth-ok> -> client
-  invalid:
-    server <auth-fail> -> client
-
-no:
-  server <auth-new> <token> -> client
-  client <auth-recv> -> server
-  !!! DON'T STORE NAME/TOKEN UNTIL AUTH-OK RECV !!!
-
-  server data: {
-    '<name>': '<token>'
-  }
-
-  server <auth-ok> -> client
-  . now the data can be safely cached .
-  client name '<name>' -> localStorage
-  client token '<token>' -> localStorage
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-*/

@@ -99,8 +99,14 @@ document.addEventListener('DOMContentLoaded', () => {
     'auth-ok': payload => {
       appendSystemMessage(`logged in as <b style="color:${payload.nameColor}">${payload.name}</b>`)
     },
-    'auth-fail': payload => {
-      appendSystemMessage(`login failed. if you believe this is an error, report it to lynn`)
+    'auth-fail-max-names': payload => {
+      appendSystemMessage('you have reached the maximum number of names. (10)')
+    },
+    'auth-fail-not-found': payload => {
+      appendSystemMessage('login failed (reason: not found). if you see this error, please contact lynn with details')
+    },
+    'auth-fail-unknown': payload => {
+      appendSystemMessage(`login failed (reason: auth_pair missing). if you see this error, please contact lynn with details`)
     },
     'priv-message': payload => {
       const cleanBody = sanitize(payload.body)
@@ -166,7 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
     onmessage: event => {
       const payload = JSON.parse(event.data)
       payloadHandlers[payload.type](payload)
-    }
+    },
   }
 
   const connect = url => {
@@ -280,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         appendSystemMessage('missing message. example: /w exampleUser23 hi, /c hello again!')
       }
-    }
+    },
   }
 
   const tryCommand = (contents) => {
