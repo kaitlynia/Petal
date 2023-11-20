@@ -41,7 +41,7 @@ const saveData = () => {
   fs.writeFileSync(dataPath, JSON.stringify(data))
 }
 
-let socks = Set()
+let socks = new Set()
 wss.on('connection', sock => {
   socks.add(sock)
   sock.name = 'anon'
