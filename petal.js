@@ -136,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
       appendSystemMessage(`color changed to <b style="color:${userData.color}">${userData.color}</b>`)
     },
     'command-color-invalid': payload => {
-      appendSystemMessage('invalid color. examples: #ff9999, rgb(127, 127, 255), yellow')
+      appendSystemMessage('invalid hex color. examples: #ff9999 (pink), #007700 (dark green), #3333ff (blue)')
     },
     'command-color-auth-required': payload => {
       appendSystemMessage('only logged in users can use the /color command. use /name to log in')

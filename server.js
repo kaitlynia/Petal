@@ -20,11 +20,7 @@ const wss = new WSServer({
 const sanitizeConfig = { ALLOWED_TAGS: ['span', 'strong', 'b', 'em', 'i'], ALLOWED_ATTR: [] }
 const sanitize = s => DOMPurify.sanitize(s, sanitizeConfig)
 const validName = s => !/[^0-9a-z]/i.test(s)
-const validColor = s => {
-  const style = new Option().style
-  style.color = s
-  return !['unset', 'initial', 'inherit', ''].includes(style.color)
-}
+const validHexColor = s => /^#[0-9a-f]{3}([0-9a-f]{3})?$/.test(s)
 
 let data = {
   tokenNames: {},
@@ -168,7 +164,7 @@ wss.on('connection', sock => {
         case 'command-color':
           if (payload.hasOwnProperty('color')) {
             if (sock.name !== 'anon') {
-              if (validColor(payload.color)) {
+              if (validHexColor(payload.color)) {
                 sock.nameColor = payload.color
                 data.nameColor[sock.name] = sock.nameColor
                 saveData()
