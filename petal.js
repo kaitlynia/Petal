@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const rootURL = window.location.href.split('://', 2)[1].split('/', 2)[1]
+  const rootURL = window.location.href.split('://', 2)[1].split('/', 2)[0]
   body = document.querySelector('body'),
   messages = document.querySelector('#messages'),
   entry = document.querySelector('#entry'),
