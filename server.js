@@ -37,6 +37,8 @@ const saveData = () => {
   fs.writeFileSync(dataPath, JSON.stringify(data))
 }
 
+const sockSend = (sock, payload) => sock.send(JSON.stringify(payload))
+
 const authToken = (sock, token, name, newName=false) => {
   const names = data.tokenNames[token]
   if (newName && names.length === 10) {
@@ -68,7 +70,7 @@ const payloadHandlers = {
   'auth-name': (sock, payload) => {
     if (payload.name === 'anon' || data.nameToken[payload.name] !== undefined) {
       // name already exists, notify client
-      send({
+      sockSend(sock, {
         type: 'auth-exists',
         name: payload.name
       })
@@ -80,14 +82,14 @@ const payloadHandlers = {
           name: payload.name,
           token: crypto.randomUUID()
         }
-        send({
+        sockSend(sock, {
           type: 'auth-new',
           name: payload.name,
           token: sock.auth_pair.token
         })
       }
     } else {
-      send({
+      sockSend(sock, {
         type: 'auth-name-invalid'
       })
     }
@@ -103,12 +105,12 @@ const payloadHandlers = {
       delete sock.auth_pair
 
       saveData()
-      send({
+      sockSend(sock, {
         type: 'auth-new-ok',
         name: sock.name
       })
     } else {
-      send({
+      sockSend(sock, {
         type: 'auth-fail-unknown'
       })
     }
@@ -124,14 +126,14 @@ const payloadHandlers = {
           nameColor: sock.nameColor,
           body: body
         }))
-        send({
+        sockSend(sock, {
           type: 'priv-message-sent',
           name: payload.name,
           nameColor: sock.nameColor,
           body: body
         })
       } else {
-        send({
+        sockSend(sock, {
           type: 'priv-message-fail',
           name: payload.name,
         })
@@ -151,12 +153,12 @@ const payloadHandlers = {
   'command-names': (sock, payload) => {
     const names = data.tokenNames[payload.token]
     if (names !== undefined) {
-      send({
+      sockSend(sock, {
         type: 'command-names-ok',
         names: names
       })
     } else {
-      send({
+      sockSend(sock, {
         type: 'command-names-fail'
       })
     }
@@ -169,17 +171,17 @@ const payloadHandlers = {
           data.nameColor[sock.name] = sock.nameColor
           saveData()
 
-          send({
+          sockSend(sock, {
             type: 'command-color-ok',
             color: sock.nameColor
           })
         } else {
-          send({
+          sockSend(sock, {
             type: 'command-color-invalid'
           })
         }
       } else {
-        send({
+        sockSend(sock, {
           type: 'command-color-auth-required'
         })
       }
@@ -187,12 +189,11 @@ const payloadHandlers = {
   }
 }
 
-let socks = new Set()
+const socks = new Set()
 wss.on('connection', sock => {
   socks.add(sock)
   sock.name = 'anon'
   sock.nameColor = '#aaaaaa'
-  const send = payload => sock.send(JSON.stringify(payload))
 
   sock.on('message', msg => {
     const payload = JSON.parse(msg)
