@@ -388,7 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   avatar.addEventListener('change', event => {
     const reader = new FileReader()
-    reader.readAsDataURL(this.files[0])
+    reader.readAsDataURL(event.target.files[0])
     reader.onload = () => {
       send({
         type: 'avatar-upload',
