@@ -49,7 +49,7 @@ const authToken = (sock, token, name, newName=false) => {
     sock.nameColor = data.nameColor[name] || '#aaaaaa'
     if (newName) {
       data.nameToken[name] = token
-      names.append(sock.name)
+      names.push(sock.name)
       saveData()
     }
     sock.send(JSON.stringify({
