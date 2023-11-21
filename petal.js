@@ -106,10 +106,10 @@ document.addEventListener('DOMContentLoaded', () => {
       appendSystemMessage('you have reached the maximum number of names. (10)')
     },
     'auth-fail-unauthorized': payload => {
-      appendSystemMessage('this name is not associated with your stored token. if you believe this is an error, please contact lynn for name recovery help')
+      appendSystemMessage('not authorized. if you believe this is an error, please contact lynn')
     },
     'auth-fail-unknown': payload => {
-      appendSystemMessage(`login failed (reason: auth_pair missing). if you see this error, please contact lynn with details`)
+      appendSystemMessage(`login failed (reason: auth_pair missing). if you see this, please contact lynn with details`)
     },
     'priv-message': payload => {
       const cleanBody = sanitize(payload.body)
