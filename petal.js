@@ -392,6 +392,7 @@ document.addEventListener('DOMContentLoaded', () => {
   })
 
   avatarImage.addEventListener('load', event => {
+    avatarCanvasContext.clearRect(0, 0, avatarCanvas.width, avatarCanvas.height);
     avatarCanvasContext.drawImage(avatarImage, 0, 0, avatarCanvas.width, avatarCanvas.height)
 
     send({
