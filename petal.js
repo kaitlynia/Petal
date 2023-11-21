@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
           token: userData.token
         })
       } else {
-        appendSystemMessage('name already exists, and you have no auth token. try using a different name')
+        appendSystemMessage('name already exists, and you have no stored token. try using a different name')
       }
     },
     'auth-name-invalid': payload => {
@@ -102,8 +102,8 @@ document.addEventListener('DOMContentLoaded', () => {
     'auth-fail-max-names': payload => {
       appendSystemMessage('you have reached the maximum number of names. (10)')
     },
-    'auth-fail-not-found': payload => {
-      appendSystemMessage('login failed (reason: not found). if you see this error, please contact lynn with details')
+    'auth-fail-unauthorized': payload => {
+      appendSystemMessage('this name is not associated with your stored token. if you believe this is an error, please contact lynn for name recovery help')
     },
     'auth-fail-unknown': payload => {
       appendSystemMessage(`login failed (reason: auth_pair missing). if you see this error, please contact lynn with details`)

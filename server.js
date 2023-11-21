@@ -59,7 +59,7 @@ const authToken = (sock, token, name, newName=false) => {
     }))
   } else {
     sock.send(JSON.stringify({
-      type: 'auth-fail-not-found'
+      type: 'auth-fail-unauthorized'
     }))
   }
 }
