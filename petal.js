@@ -196,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
     connect: (args) => {
       let dest = args
       if (!dest) {
-        if (userData.server != undefined) {
+        if (userData.server !== undefined) {
           dest = userData.server
         } else {
           return appendSystemMessage('missing server url. example: /connect lynn.fun')
@@ -210,10 +210,10 @@ document.addEventListener('DOMContentLoaded', () => {
           server = connect(dest)
         }
         // close if not already closing
-        if (server.readyState != 2) {
+        if (server.readyState !== 2) {
           server.close()
         }
-      // unopened or closed (!server || readyState == 3)
+      // unopened or closed (!server || readyState === 3)
       } else {
         server = connect(dest)
       }
@@ -261,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (args) {
         const spaceIndex = args.search(' ')
         const body = args.slice(spaceIndex)
-        if (spaceIndex != -1 && body.length > 0) {
+        if (spaceIndex !== -1 && body.length > 0) {
           send({
             type: 'priv-message',
             name: args.slice(0, spaceIndex),
@@ -275,7 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     },
     c: (args) => {
-      if (userData.lastUserMessaged == undefined) {
+      if (userData.lastUserMessaged === undefined) {
         appendSystemMessage('no previous recipient. example: /w exampleUser23 hi, /c hello again!')
       } else if (args && args.length > 1) {
         send({
@@ -292,9 +292,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const tryCommand = (contents) => {
     if (contents.charAt(0) === '/') {
       const spaceIndex = contents.search(' ')
-      const cmd = spaceIndex != -1 ? contents.slice(1, spaceIndex) : contents.slice(1)
+      const cmd = spaceIndex !== -1 ? contents.slice(1, spaceIndex) : contents.slice(1)
       if (commands.hasOwnProperty(cmd)) {
-        commands[cmd](spaceIndex != -1 ? contents.slice(spaceIndex + 1) : null)
+        commands[cmd](spaceIndex !== -1 ? contents.slice(spaceIndex + 1) : null)
       } else {
         appendSystemMessage(`unknown command: ${cmd}`)
       }
@@ -304,7 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const processKeyboardEvent = (event) => {
-    if (event.key == 'Enter' && !event.shiftKey) {
+    if (event.key === 'Enter' && !event.shiftKey) {
       // prevent newline character
       event.preventDefault()
 

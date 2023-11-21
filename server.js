@@ -128,7 +128,7 @@ wss.on('connection', sock => {
           break
         case 'priv-message':
           if (payload.hasOwnProperty('body') && payload.hasOwnProperty('name')) {
-            const user = [...socks].find(s => s.name == payload.name)
+            const user = [...socks].find(s => s.name === payload.name)
             if (user !== undefined) {
               const body = sanitize(payload.body)
               user.send(JSON.stringify({
