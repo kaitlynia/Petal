@@ -190,7 +190,7 @@ const payloadHandlers = {
   },
   'avatar-upload': (sock, payload) => {
     if (sock.name !== 'anon') {
-      fs.writeFile(`avatars/${sock.name}.png`, payload.data, 'base64url', err => {
+      fs.writeFile(`/var/www/html/avatars/${sock.name}.png`, payload.data, 'base64url', err => {
         if (err) {
           sockSend(sock, {
             type: 'avatar-upload-fail',
