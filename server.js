@@ -47,7 +47,7 @@ const authToken = (sock, token, name, newName=false) => {
     sock.token = token
     sock.name = name
     sock.nameColor = data.nameColor[name] || '#aaaaaa'
-    if (newAuth) {
+    if (newName) {
       data.nameToken[name] = token
       names.append(sock.name)
       saveData()
