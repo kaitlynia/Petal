@@ -194,7 +194,7 @@ const payloadHandlers = {
         if (err) {
           sockSend(sock, {
             type: 'avatar-upload-fail',
-            reason: err
+            reason: err.toString()
           })
         } else {
           data.nameAvatar[sock.name] = true
