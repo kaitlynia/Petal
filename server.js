@@ -1,9 +1,9 @@
-const crypto = require('crypto')
-const fs = require('fs')
-const https = require('https')
-const WSServer = require('ws').Server
-const createDOMPurify = require('dompurify')
-const JSDOM = require('jsdom').JSDOM
+const crypto = require('crypto'),
+fs = require('fs'),
+https = require('https'),
+WSServer = require('ws').Server,
+createDOMPurify = require('dompurify'),
+JSDOM = require('jsdom').JSDOM
 
 const window = new JSDOM('').window
 const DOMPurify = createDOMPurify(window)
@@ -17,10 +17,10 @@ const wss = new WSServer({
   server: https_server
 })
 
-const sanitizeConfig = { ALLOWED_TAGS: ['strong', 'b', 'em', 'i'], ALLOWED_ATTR: [] }
-const sanitize = s => DOMPurify.sanitize(s, sanitizeConfig)
-const validName = s => !/[^0-9a-z]/i.test(s)
-const validHexColor = s => /^#[0-9a-f]{3}([0-9a-f]{3})?$/.test(s)
+const sanitizeConfig = { ALLOWED_TAGS: ['strong', 'b', 'em', 'i'], ALLOWED_ATTR: [] },
+sanitize = s => DOMPurify.sanitize(s, sanitizeConfig),
+validName = s => !/[^0-9a-z]/i.test(s),
+validHexColor = s => /^#[0-9a-f]{3}([0-9a-f]{3})?$/.test(s)
 
 let data = {
   tokenNames: {},
@@ -192,7 +192,7 @@ const payloadHandlers = {
     if (sock.name !== 'anon') {
       fs.writeFile(`avatars/${sock.name}.png`, payload.data, 'base64url', err => {
         if (err) {
-          sockSend({
+          sockSend(sock, {
             type: 'avatar-upload-fail',
             reason: err
           })
@@ -200,7 +200,7 @@ const payloadHandlers = {
           data.nameAvatar[sock.name] = true
           saveData()
 
-          sockSend({
+          sockSend(sock, {
             type: 'avatar-upload-ok'
           })
         }
