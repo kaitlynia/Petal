@@ -91,6 +91,20 @@ html {
   width: 10px;
 }
 
+.msg {
+  padding: 0.25rem 0;
+}
+
+.msg > img:first-child {
+  border-radius: 4px;
+  margin-right: 0.25rem;
+  max-width: 32px;
+}
+
+.msg > span {
+  vertical-align: super;
+}
+
 .msg--system {
   color: var(--system-message);
 }

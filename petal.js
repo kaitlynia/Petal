@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let server = null,
   controlKeyHeld = false,
-  sanitizeConfig = { ALLOWED_TAGS: ['span', 'strong', 'b', 'em', 'i'], ALLOWED_ATTR: [] },
+  sanitizeConfig = { ALLOWED_TAGS: ['strong', 'b', 'em', 'i'], ALLOWED_ATTR: [] },
   userData = {
     server: localStorage.getItem('server') || undefined,
     token: localStorage.getItem('token') || undefined,
@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setUserData('lastUserMessaged', payload.name)
       const cleanBody = sanitize(payload.body)
       if (cleanBody !== '') {
-        addMessage(`<img src="${window.location.href + payload.avatarFile}"><b style="color:${payload.nameColor}">${payload.name}</b>: ${cleanBody}`, payload.type)
+        addMessage(`<img src="${window.location.href + payload.avatarFile}"><span><b style="color:${payload.nameColor}">${payload.name}</b>: ${cleanBody}</span>`, payload.type)
       }
     },
     'command-color-ok': payload => {
