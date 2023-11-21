@@ -93,11 +93,13 @@ document.addEventListener('DOMContentLoaded', () => {
       })
     },
     'auth-new-ok': payload => {
-      localStorage.setItem('name', userData.name)
-      localStorage.setItem('token', userData.token)
+      setUserData('name', userData.name)
+      setUserData('token', userData.token)
       appendSystemMessage(`logged in as <b>${payload.name}</b>`)
     },
     'auth-ok': payload => {
+      setUserData('name', payload.name)
+      setUserData('color', payload.nameColor)
       appendSystemMessage(`logged in as <b style="color:${payload.nameColor}">${payload.name}</b>`)
     },
     'auth-fail-max-names': payload => {
