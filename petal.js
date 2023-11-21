@@ -1,9 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const pageURL = window.location.href.split('://', 2)[1],
+  const rootURL = window.location.href.split('://', 2)[1].split('/', 2)[1]
   body = document.querySelector('body'),
   messages = document.querySelector('#messages'),
   entry = document.querySelector('#entry'),
-  sanitize = s => DOMPurify.sanitize(s, sanitizeConfig)
+  sanitize = s => DOMPurify.sanitize(s, sanitizeConfig),
+  validName = s => !/[^0-9a-z]/i.test(s),
+  validColor = s => {
+    const style = new Option().style
+    style.color = s
+    return !['unset', 'initial', 'inherit', ''].includes(style.color)
+  }
 
   let server = null,
   controlKeyHeld = false,
@@ -17,16 +23,12 @@ document.addEventListener('DOMContentLoaded', () => {
     theme: localStorage.getItem('theme') || 'dark',
     scrollThreshold: localStorage.getItem('scrollThreshold') || 50,
     logConnectionEvents: localStorage.getItem('logConnectionEvents') || true,
-  }
+  },
+  avatar = document.createElement('input')
 
-  const validName = s => !/[^0-9a-z]/i.test(s)
-  const validColor = s => {
-    const style = new Option().style
-    style.color = s
-    return !['unset', 'initial', 'inherit', ''].includes(style.color)
-  }
+  avatar.type = 'file'
 
-  const appendMessage = (message, type='message') => {
+  const addMessage = (message, type='message') => {
     const scrollHeight = messages.scrollHeight
 
     messages.innerHTML += `<p class="msg${type !== 'message' ? ' msg--' + type : ''}">${message}</p>`
@@ -37,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const systemMessage = (message) => {
-    appendMessage(message, 'system')
+    addMessage(message, 'system')
   }
 
   const cleanMessage = (rawContents) => {
@@ -114,14 +116,14 @@ document.addEventListener('DOMContentLoaded', () => {
     'priv-message': payload => {
       const cleanBody = sanitize(payload.body)
       if (cleanBody !== '') {
-        appendMessage(`← <b style="color:${payload.nameColor}">${payload.name}</b>: ${cleanBody}`, payload.type)
+        addMessage(`← <b style="color:${payload.nameColor}">${payload.name}</b>: ${cleanBody}`, payload.type)
       }
     },
     'priv-message-sent': payload => {
       setUserData('lastUserMessaged', payload.name)
       const cleanBody = sanitize(payload.body)
       if (cleanBody !== '') {
-        appendMessage(`→ <b>${payload.name}</b>: ${cleanBody}`, payload.type)
+        addMessage(`→ <b>${payload.name}</b>: ${cleanBody}`, payload.type)
       }
     },
     'priv-message-fail': payload => {
@@ -131,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setUserData('lastUserMessaged', payload.name)
       const cleanBody = sanitize(payload.body)
       if (cleanBody !== '') {
-          appendMessage(`<b style="color:${payload.nameColor}">${payload.name}</b>: ${cleanBody}`, payload.type)
+        addMessage(`<img src="${window.location.href + payload.avatarFile}"><b style="color:${payload.nameColor}">${payload.name}</b>: ${cleanBody}`, payload.type)
       }
     },
     'command-color-ok': payload => {
@@ -149,6 +151,15 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     'command-names-fail': payload => {
       systemMessage('you have no names. try /name <name>')
+    },
+    'avatar-upload-ok': payload => {
+      systemMessage('avatar updated')
+    },
+    'avatar-upload-fail': payload => {
+      systemMessage('invalid avatar. if you are certain the image you uploaded is valid, please contact lynn with details')
+    },
+    'avatar-upload-auth-required': payload => {
+      systemMessage('only logged in users can upload an avatar. use /name to log in')
     }
   }
 
@@ -208,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (userData.server !== undefined) {
           dest = userData.server
         } else {
-          return systemMessage(`missing server url. example: /connect ${pageURL}`)
+          return systemMessage(`missing server url. example: /connect ${rootURL}`)
         }
       }
 
@@ -254,7 +265,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (userData.token !== undefined) {
         send({
           type: 'command-names',
-          token: userData.token
         })
       } else {
         payloadHandlers['command-names-fail']()
@@ -275,6 +285,9 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         systemMessage('you have the default name color. use /color <color> to set one')
       }
+    },
+    avatar: args => {
+      avatar.click()
     },
     w: args => {
       if (args) {
@@ -373,11 +386,22 @@ document.addEventListener('DOMContentLoaded', () => {
     processKeyboardEvent(event)
   })
 
+  avatar.addEventListener('change', event => {
+    const reader = new FileReader()
+    reader.readAsDataURL(this.files[0])
+    reader.onload = () => {
+      send({
+        type: 'avatar-upload',
+        data: reader.result
+      })
+    }
+  })
+
   /* auto-connect */
 
   if (userData.server !== undefined) {
     server = connect(userData.server)
   } else {
-    systemMessage(`welcome to Petal! use /connect <url> to connect to a server. (try ${pageURL})`)
+    systemMessage(`welcome to Petal! use /connect <url> to connect to a server. (try ${rootURL})`)
   }
 })

@@ -146,12 +146,13 @@ const payloadHandlers = {
         type: 'message',
         name: sock.name,
         nameColor: sock.nameColor,
+        avatarFile: `avatars/${data.nameAvatar[sock.name] ? sock.name : 'anon'}.png`,
         body: sanitize(payload.body)
       })))
     }
   },
   'command-names': (sock, payload) => {
-    const names = data.tokenNames[payload.token]
+    const names = data.tokenNames[sock.token]
     if (names !== undefined) {
       sockSend(sock, {
         type: 'command-names-ok',
@@ -186,7 +187,30 @@ const payloadHandlers = {
         })
       }
     }
-  }
+  },
+  'avatar-upload': (sock, payload) => {
+    if (sock.name !== 'anon') {
+      fs.writeFile(`avatars/${sock.name}.png`, payload.data, 'base64url', err => {
+        if (err) {
+          sockSend({
+            type: 'avatar-upload-fail',
+            reason: err
+          })
+        } else {
+          data.nameAvatar[sock.name] = true
+          saveData()
+
+          sockSend({
+            type: 'avatar-upload-ok'
+          })
+        }
+      })
+    } else {
+      sockSend(sock, {
+        type: 'avatar-upload-auth-required'
+      })
+    }
+  },
 }
 
 const socks = new Set()
