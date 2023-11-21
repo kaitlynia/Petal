@@ -156,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
       systemMessage('avatar updated')
     },
     'avatar-upload-fail': payload => {
-      systemMessage('invalid avatar. if you are certain the image you uploaded is valid, please contact lynn with details')
+      systemMessage(`invalid avatar (reason: ${payload.reason}). if you are certain the image you uploaded is valid, please contact lynn with the specified error message`)
     },
     'avatar-upload-auth-required': payload => {
       systemMessage('only logged in users can upload an avatar. use /name to log in')
