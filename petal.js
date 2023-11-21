@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const body = document.querySelector('body'),
+  const pageURL = window.location.href.split('://', 1)[1],
+  body = document.querySelector('body'),
   messages = document.querySelector('#messages'),
   entry = document.querySelector('#entry'),
   sanitize = s => DOMPurify.sanitize(s, sanitizeConfig)
@@ -199,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (userData.server !== undefined) {
           dest = userData.server
         } else {
-          return appendSystemMessage('missing server url. example: /connect lynn.fun')
+          return appendSystemMessage(`missing server url. example: /connect ${pageURL}`)
         }
       }
 
@@ -359,6 +360,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (userData.server !== undefined) {
     server = connect(userData.server)
   } else {
-    appendSystemMessage('welcome to Petal! use /connect <url> to connect to a server. (try lynn.fun!)')
+    appendSystemMessage(`welcome to Petal! use /connect <url> to connect to a server. (try ${pageURL})`)
   }
 })
