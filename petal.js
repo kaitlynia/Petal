@@ -24,9 +24,14 @@ document.addEventListener('DOMContentLoaded', () => {
     scrollThreshold: localStorage.getItem('scrollThreshold') || 50,
     logConnectionEvents: localStorage.getItem('logConnectionEvents') || true,
   },
-  avatar = document.createElement('input')
+  avatarImage = document.createElement('img'),
+  avatarCanvas = document.createElement('canvas'),
+  avatarInput = document.createElement('input')
 
-  avatar.type = 'file'
+  avatarCanvas.width = 256
+  avatarCanvas.height = 256
+  let avatarCanvasContext = avatarCanvas.getContext('2d')
+  avatarInput.type = 'file'
 
   const addMessage = (message, type='message') => {
     const scrollHeight = messages.scrollHeight
@@ -287,7 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     },
     avatar: args => {
-      avatar.click()
+      avatarInput.click()
     },
     w: args => {
       if (args) {
@@ -386,15 +391,17 @@ document.addEventListener('DOMContentLoaded', () => {
     processKeyboardEvent(event)
   })
 
-  avatar.addEventListener('change', event => {
-    const reader = new FileReader()
-    reader.readAsDataURL(event.target.files[0])
-    reader.onload = () => {
-      send({
-        type: 'avatar-upload',
-        data: reader.result
-      })
-    }
+  avatarImage.addEventListener('load', event => {
+    avatarCanvasContext.drawImage(avatarImage, 0, 0, avatarCanvas.width, avatarCanvas.height)
+
+    send({
+      type: 'avatar-upload',
+      data: avatarCanvas.toDataURL('image/png')
+    })
+  })
+
+  avatarInput.addEventListener('change', event => {
+    avatarImage.src = URL.createObjectURL(avatarInput.files[0])
   })
 
   /* auto-connect */
