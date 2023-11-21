@@ -65,7 +65,7 @@ const authToken = (sock, token, name, newName=false) => {
 }
 
 const payloadHandlers = {
-  'auth-name': payload => {
+  'auth-name': (sock, payload) => {
     if (payload.name === 'anon' || data.nameToken[payload.name] !== undefined) {
       // name already exists, notify client
       send({
@@ -92,10 +92,10 @@ const payloadHandlers = {
       })
     }
   },
-  'auth-token': payload => {
+  'auth-token': (sock, payload) => {
     authToken(sock, payload.token, payload.name)
   },
-  'auth-recv': payload => {
+  'auth-recv': (sock, payload) => {
     if (sock.auth_pair !== undefined) {
       sock.name = sock.auth_pair.name
       data.nameToken[sock.name] = sock.auth_pair.token
@@ -113,7 +113,7 @@ const payloadHandlers = {
       })
     }
   },
-  'priv-message': payload => {
+  'priv-message': (sock, payload) => {
     if (payload.hasOwnProperty('body') && payload.hasOwnProperty('name')) {
       const user = [...socks].find(s => s.name === payload.name)
       if (user !== undefined) {
@@ -138,7 +138,7 @@ const payloadHandlers = {
       }
     }
   },
-  'message': payload => {
+  'message': (sock, payload) => {
     if (payload.hasOwnProperty('body')) {
       socks.forEach(s => s.send(JSON.stringify({
         type: 'message',
@@ -148,7 +148,7 @@ const payloadHandlers = {
       })))
     }
   },
-  'command-names': payload => {
+  'command-names': (sock, payload) => {
     const names = data.tokenNames[payload.token]
     if (names !== undefined) {
       send({
@@ -161,7 +161,7 @@ const payloadHandlers = {
       })
     }
   },
-  'command-color': payload => {
+  'command-color': (sock, payload) => {
     if (payload.hasOwnProperty('color')) {
       if (sock.name !== 'anon') {
         if (validHexColor(payload.color)) {
@@ -187,7 +187,6 @@ const payloadHandlers = {
   }
 }
 
-
 let socks = new Set()
 wss.on('connection', sock => {
   socks.add(sock)
@@ -197,7 +196,7 @@ wss.on('connection', sock => {
 
   sock.on('message', msg => {
     const payload = JSON.parse(msg)
-    payloadHandlers[payload.type](payload)
+    payloadHandlers[payload.type](sock, payload)
   })
   sock.on('close', () => {
     socks.delete(sock)
