@@ -13,13 +13,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let server = null,
   controlKeyHeld = false,
-  sanitizeConfig = { ALLOWED_TAGS: ['strong', 'b', 'em', 'i'], ALLOWED_ATTR: [] },
+  lastMessageGroup = null,
+  sanitizeConfig = { ALLOWED_TAGS: ['strong', 'b', 'em', 'i', 'br'], ALLOWED_ATTR: [] },
   userData = {
     server: localStorage.getItem('server') || undefined,
     token: localStorage.getItem('token') || undefined,
     name: localStorage.getItem('name') || undefined,
     color: localStorage.getItem('color') || undefined,
-    lastUserMessaged: localStorage.getItem('lastUserMessaged') || undefined,
+    lastUserPrivateMessaged: localStorage.getItem('lastUserPrivateMessaged') || undefined,
     theme: localStorage.getItem('theme') || 'dark',
     scrollThreshold: localStorage.getItem('scrollThreshold') || 50,
     logConnectionEvents: localStorage.getItem('logConnectionEvents') || true,
@@ -33,14 +34,42 @@ document.addEventListener('DOMContentLoaded', () => {
   let avatarCanvasContext = avatarCanvas.getContext('2d')
   avatarInput.type = 'file'
 
-  const addMessage = (message, type='message') => {
-    const scrollHeight = messages.scrollHeight
+  const setUserData = (key, val) => {
+    userData[key] = val
+    localStorage.setItem(key, val)
+  }
 
-    messages.innerHTML += `<p class="msg${type !== 'message' ? ' msg--' + type : ''}">${message}</p>`
-
+  const tryScrollFrom = scrollHeight => {
     if (messages.clientHeight + messages.scrollTop + userData.scrollThreshold >= scrollHeight) {
       messages.scrollTop = messages.scrollHeight
     }
+  }
+
+  const addMessage = (text, modifier) => {
+    const scrollHeight = messages.scrollHeight
+    lastMessageGroup = null
+
+    messages.innerHTML += `<div class="msg${modifier !== undefined ? ' msg--' + modifier : ''}">${text}</div>`
+
+    tryScrollFrom(scrollHeight)
+  }
+
+  const addMessageGroup = (author, authorColor, messageText) => {
+    const scrollHeight = messages.scrollHeight
+    lastMessageGroup = author
+
+    // ${window.location.href + payload.avatarFile}
+    messages.innerHTML += `<div class="msg-group"><img class="avatar" src="https://lynn.fun/avatars/Maple.png"><div class="col"><div class="author" style="color: ${authorColor};">${author}</div><div class="msg">${messageText}</div></div>`
+
+    tryScrollFrom(scrollHeight)
+  }
+
+  const addToLastMessageGroup = messageText => {
+    const scrollHeight = messages.scrollHeight
+
+    messages.querySelector('.msg-group:last-of-type > .col').innerHTML += `<div class="msg">${messageText}</div>`
+
+    tryScrollFrom(scrollHeight)
   }
 
   const systemMessage = (message) => {
@@ -60,17 +89,12 @@ document.addEventListener('DOMContentLoaded', () => {
       reader.readAsText(contents)
     }
 
-    return sanitize(contents).trim()
+    return sanitize(contents).trim().replace('\n', '<br>')
   }
 
   const cleanURL = url => {
     url = url.replace('wss://', '').replace(':8080', '')
     return url.endsWith('/') ? url.slice(0, -1) : url
-  }
-
-  const setUserData = (key, val) => {
-    userData[key] = val
-    localStorage.setItem(key, val)
   }
 
   const send = payload => server.send(JSON.stringify(payload))
@@ -125,9 +149,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     },
     'priv-message-sent': payload => {
-      setUserData('lastUserMessaged', payload.name)
       const cleanBody = sanitize(payload.body)
       if (cleanBody !== '') {
+        setUserData('lastUserPrivateMessaged', payload.name)
         addMessage(`→ <b>${payload.name}</b>: ${cleanBody}`, payload.type)
       }
     },
@@ -135,10 +159,13 @@ document.addEventListener('DOMContentLoaded', () => {
       systemMessage(`message could not be sent to <b>${payload.name}</b>. did they change their name?`)
     },
     'message': payload => {
-      setUserData('lastUserMessaged', payload.name)
       const cleanBody = sanitize(payload.body)
       if (cleanBody !== '') {
-        addMessage(`<img src="${window.location.href + payload.avatarFile}"><span><b style="color:${payload.nameColor}">${payload.name}</b>: ${cleanBody}</span>`, payload.type)
+        if (lastMessageGroup != payload.name) {
+          addMessageGroup(payload.name, payload.nameColor, cleanBody)
+        } else (
+          addToLastMessageGroup(cleanBody)
+        )
       }
     },
     'command-color-ok': payload => {
@@ -181,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     onopen: event => {
       if (userData.logConnectionEvents) {
-        systemMessage(`connected to ${cleanURL(server.url)}`)
+        systemMessage('connected')
       }
 
       setUserData('server', server.url)
@@ -312,12 +339,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     },
     c: args => {
-      if (userData.lastUserMessaged === undefined) {
+      if (userData.lastUserPrivateMessaged === undefined) {
         systemMessage('no previous recipient. example: /w exampleUser23 hi, /c hello again!')
       } else if (args && args.length > 1) {
         send({
           type: 'priv-message',
-          name: userData.lastUserMessaged,
+          name: userData.lastUserPrivateMessaged,
           body: sanitize(args),
         })
       } else {

@@ -17,7 +17,7 @@ const wss = new WSServer({
   server: https_server
 })
 
-const sanitizeConfig = { ALLOWED_TAGS: ['strong', 'b', 'em', 'i'], ALLOWED_ATTR: [] },
+const sanitizeConfig = { ALLOWED_TAGS: ['strong', 'b', 'em', 'i', 'br'], ALLOWED_ATTR: [] },
 sanitize = s => DOMPurify.sanitize(s, sanitizeConfig),
 validName = s => !/[^0-9a-z]/i.test(s),
 validHexColor = s => /^#[0-9a-f]{3}([0-9a-f]{3})?$/.test(s)
