@@ -20,12 +20,17 @@ const wss = new WSServer({
 const sanitizeConfig = { ALLOWED_TAGS: ['strong', 'b', 'em', 'i', 'br'], ALLOWED_ATTR: [] },
 sanitize = s => DOMPurify.sanitize(s, sanitizeConfig),
 validName = s => !/[^0-9a-z]/i.test(s),
-validHexColor = s => /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(s)
+validHexColor = s => /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(s),
+defaultNameColor = '#aaaaaa',
+defaultTextColor = '#ffffff',
+defaultBgColor = '#202020'
 
 let data = {
   tokenNames: {},
   nameToken: {},
   nameColor: {},
+  nameTextColor: {},
+  nameBgColor: {},
   nameAvatar: {},
 }
 
@@ -48,7 +53,9 @@ const authToken = (sock, token, name, newName=false) => {
   } else if (names !== undefined && (names.includes(name) || newName)) {
     sock.token = token
     sock.name = name
-    sock.nameColor = data.nameColor[name] || '#aaaaaa'
+    sock.nameColor = data.nameColor[name] || defaultNameColor
+    sock.textColor = data.nameTextColor[name] || defaultTextColor
+    sock.bgColor = data.nameBgColor[name] || defaultBgColor
     if (newName) {
       data.nameToken[name] = token
       names.push(sock.name)
@@ -57,7 +64,9 @@ const authToken = (sock, token, name, newName=false) => {
     sock.send(JSON.stringify({
       type: 'auth-ok',
       name: sock.name,
-      nameColor: sock.nameColor
+      nameColor: sock.nameColor,
+      textColor: sock.textColor,
+      bgColor: sock.bgColor
     }))
   } else {
     sock.send(JSON.stringify({
@@ -124,12 +133,16 @@ const payloadHandlers = {
           type: 'priv-message',
           name: sock.name,
           nameColor: sock.nameColor,
+          textColor: sock.textColor,
+          bgColor: sock.bgColor,
           body: body
         }))
         sockSend(sock, {
           type: 'priv-message-sent',
           name: payload.name,
           nameColor: sock.nameColor,
+          textColor: sock.textColor,
+          bgColor: sock.bgColor,
           body: body
         })
       } else {
@@ -146,7 +159,8 @@ const payloadHandlers = {
         type: 'message',
         name: sock.name,
         nameColor: sock.nameColor,
-        avatarFile: `avatars/${data.nameAvatar[sock.name] ? sock.name : 'anon'}.png`,
+        textColor: sock.textColor,
+        bgColor: sock.bgColor,
         body: sanitize(payload.body)
       })))
     }
@@ -175,6 +189,54 @@ const payloadHandlers = {
           sockSend(sock, {
             type: 'command-color-ok',
             color: sock.nameColor
+          })
+        } else {
+          sockSend(sock, {
+            type: 'command-color-invalid'
+          })
+        }
+      } else {
+        sockSend(sock, {
+          type: 'command-color-auth-required'
+        })
+      }
+    }
+  },
+  'command-textcolor': (sock, payload) => {
+    if (payload.hasOwnProperty('color')) {
+      if (sock.name !== 'anon') {
+        if (validHexColor(payload.color)) {
+          sock.textColor = payload.color
+          data.nameTextColor[sock.name] = sock.textColor
+          saveData()
+
+          sockSend(sock, {
+            type: 'command-textcolor-ok',
+            color: sock.textColor
+          })
+        } else {
+          sockSend(sock, {
+            type: 'command-color-invalid'
+          })
+        }
+      } else {
+        sockSend(sock, {
+          type: 'command-color-auth-required'
+        })
+      }
+    }
+  },
+  'command-bgcolor': (sock, payload) => {
+    if (payload.hasOwnProperty('color')) {
+      if (sock.name !== 'anon') {
+        if (validHexColor(payload.color)) {
+          sock.bgColor = payload.color
+          data.nameBgColor[sock.name] = sock.bgColor
+          saveData()
+
+          sockSend(sock, {
+            type: 'command-bgcolor-ok',
+            color: sock.bgColor
           })
         } else {
           sockSend(sock, {
@@ -217,7 +279,9 @@ const socks = new Set()
 wss.on('connection', sock => {
   socks.add(sock)
   sock.name = 'anon'
-  sock.nameColor = '#aaaaaa'
+  sock.nameColor = defaultNameColor
+  sock.textColor = defaultTextColor
+  sock.bgColor = defaultBgColor
 
   sock.on('message', msg => {
     const payload = JSON.parse(msg)

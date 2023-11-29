@@ -20,6 +20,8 @@ document.addEventListener('DOMContentLoaded', () => {
     token: localStorage.getItem('token') || undefined,
     name: localStorage.getItem('name') || undefined,
     color: localStorage.getItem('color') || undefined,
+    textColor: localStorage.getItem('bgColor') || undefined,
+    bgColor: localStorage.getItem('bgcolor') || undefined,
     lastUserPrivateMessaged: localStorage.getItem('lastUserPrivateMessaged') || undefined,
     theme: localStorage.getItem('theme') || 'dark',
     scrollThreshold: localStorage.getItem('scrollThreshold') || 50,
@@ -49,16 +51,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const scrollHeight = messages.scrollHeight
     lastMessageGroup = null
 
+    // NOTE: support optional text/bg colors?
     messages.innerHTML += `<div class="msg${modifier !== undefined ? ' msg--' + modifier : ''}">${text}</div>`
 
     tryScrollFrom(scrollHeight)
   }
 
-  const addMessageGroup = (author, authorColor, messageText) => {
+  const addMessageGroup = (payload, messageText) => {
     const scrollHeight = messages.scrollHeight
     lastMessageGroup = author
 
-    messages.innerHTML += `<div class="msg-group"><img class="avatar" src="https://${rootURL + "/avatars/" + author}.png"><div class="col"><div class="author" style="color: ${authorColor};">${author}</div><div class="msg">${messageText}</div></div>`
+    messages.innerHTML += `<div class="msg-group" style="background: ${payload.bgColor};"><img class="avatar" src="https://${rootURL + "/avatars/" + payload.name}.png"><div class="col"><div class="author" style="color: ${payload.nameColor};">${payload.name}</div><div class="msg" style="color: ${payload.textColor};">${messageText}</div></div>`
 
     tryScrollFrom(scrollHeight)
   }
@@ -130,7 +133,9 @@ document.addEventListener('DOMContentLoaded', () => {
     'auth-ok': payload => {
       setUserData('name', payload.name)
       setUserData('color', payload.nameColor)
-      systemMessage(`logged in as <b style="color:${payload.nameColor}">${payload.name}</b>`)
+      setUserData('textColor', payload.textColor)
+      setUserData('bgColor', payload.bgColor)
+      systemMessage(`logged in as <b style="color: ${payload.nameColor};">${payload.name}</b>`)
     },
     'auth-fail-max-names': payload => {
       systemMessage('you have reached the maximum number of names. (10)')
@@ -144,13 +149,15 @@ document.addEventListener('DOMContentLoaded', () => {
     'priv-message': payload => {
       const cleanBody = sanitize(payload.body)
       if (cleanBody !== '') {
-        addMessage(`← <b style="color:${payload.nameColor}">${payload.name}</b>: ${cleanBody}`, payload.type)
+        // NOTE: use textColor/bgColor here?
+        addMessage(`← <b style="color: ${payload.nameColor}";>${payload.name}</b>: ${cleanBody}`, payload.type)
       }
     },
     'priv-message-sent': payload => {
       const cleanBody = sanitize(payload.body)
       if (cleanBody !== '') {
         setUserData('lastUserPrivateMessaged', payload.name)
+        // NOTE: use textColor/bgColor here?
         addMessage(`→ <b>${payload.name}</b>: ${cleanBody}`, payload.type)
       }
     },
@@ -161,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const cleanBody = sanitize(payload.body)
       if (cleanBody !== '') {
         if (lastMessageGroup === null || lastMessageGroup != payload.name) {
-          addMessageGroup(payload.name, payload.nameColor, cleanBody)
+          addMessageGroup(payload, cleanBody)
         } else (
           addToLastMessageGroup(cleanBody)
         )
@@ -175,7 +182,15 @@ document.addEventListener('DOMContentLoaded', () => {
       systemMessage('invalid hex color. examples: #ff9999 (pink), #007700 (dark green), #3333ff (blue)')
     },
     'command-color-auth-required': payload => {
-      systemMessage('only logged in users can use the /color command. use /name to log in')
+      systemMessage('only logged in users can use color commands. use /name to log in')
+    },
+    'command-textcolor-ok': payload => {
+      setUserData('textColor', payload.color)
+      systemMessage(`background color changed to <b style="color:${userData.textColor}">${userData.textColor}</b>`)
+    },
+    'command-bgcolor-ok': payload => {
+      setUserData('bgColor', payload.color)
+      systemMessage(`text color changed to <b style="color:${userData.bgColor}">${userData.bgColor}</b>`)
     },
     'command-names-ok': payload => {
       systemMessage(`names: ${payload.names.join(', ')}`)
@@ -312,9 +327,41 @@ document.addEventListener('DOMContentLoaded', () => {
           payloadHandlers['command-color-invalid']()
         }
       } else if (userData.color !== undefined) {
-        systemMessage(`your name color is <b style="color:${userData.color}">${userData.color}</b>`)
+        systemMessage(`your name color is <b style="color: ${userData.color};">${userData.color}</b>`)
       } else {
-        systemMessage('you have the default name color. use /color <color> to set one')
+        systemMessage('you have the default name color. use /color <color> (ex. /color #ffaaaa)')
+      }
+    },
+    textcolor: args => {
+      if (args) {
+        if (validColor(args)) {
+          send({
+            type: 'command-textcolor',
+            color: args
+          })
+        } else {
+          payloadHandlers['command-color-invalid']()
+        }
+      } else if (userData.textColor !== undefined) {
+        systemMessage(`your name color is <b style="color: ${userData.textColor};">${userData.textColor}</b>`)
+      } else {
+        systemMessage('you have the default text color. use /textcolor <color> (ex. /textcolor #ffaaaa)')
+      }
+    },
+    bgcolor: args => {
+      if (args) {
+        if (validColor(args)) {
+          send({
+            type: 'command-bgcolor',
+            color: args
+          })
+        } else {
+          payloadHandlers['command-color-invalid']()
+        }
+      } else if (userData.bgColor !== undefined) {
+        systemMessage(`your background color is <b style="color: ${userData.bgColor};">${userData.bgColor}</b>`)
+      } else {
+        systemMessage('you have the default background color. use /bgcolor <color> (ex. /bgcolor #ffaaaa)')
       }
     },
     avatar: args => {
