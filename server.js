@@ -23,7 +23,8 @@ validName = s => !/[^0-9a-z]/i.test(s),
 validHexColor = s => /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(s),
 defaultNameColor = '#aaaaaa',
 defaultTextColor = '#ffffff',
-defaultBgColor = '#202020'
+defaultBgColor = '#202020',
+maxMessageHistory = 50
 
 let data = {
   tokenNames: {},
@@ -32,6 +33,8 @@ let data = {
   nameTextColor: {},
   nameBgColor: {},
   nameAvatar: {},
+  messageHistory: [],
+  messageHistoryIndex: 0,
 }
 
 if (fs.existsSync(dataPath)) {
@@ -66,7 +69,8 @@ const authToken = (sock, token, name, newName=false) => {
       name: sock.name,
       nameColor: sock.nameColor,
       textColor: sock.textColor,
-      bgColor: sock.bgColor
+      bgColor: sock.bgColor,
+      history: data.messageHistory
     }))
   } else {
     sock.send(JSON.stringify({
@@ -124,6 +128,14 @@ const payloadHandlers = {
       })
     }
   },
+  'history': (sock, payload) => {
+    if (sock.name !== 'anon') {
+      sockSend(sock, {
+        type: 'history-ok',
+        history: data.messageHistory.slice(data.messageHistoryIndex).concat(...data.messageHistory.slice(0, messageHistoryIndex))
+      })
+    }
+  },
   'priv-message': (sock, payload) => {
     if (payload.hasOwnProperty('body') && payload.hasOwnProperty('name')) {
       const user = [...socks].find(s => s.name === payload.name)
@@ -155,13 +167,26 @@ const payloadHandlers = {
   },
   'message': (sock, payload) => {
     if (payload.hasOwnProperty('body')) {
+      const cleanBody = sanitize(payload.body)
+      data.messageHistory[data.messageHistoryIndex] = {
+        name: sock.name,
+        nameColor: sock.nameColor,
+        textColor: sock.textColor,
+        bgColor: sock.bgColor,
+        body: cleanBody,
+      }
+      if (data.messageHistoryIndex + 1 >= maxMessageHistory) {
+        data.messageHistoryIndex = 0
+      } else {
+        data.messageHistoryIndex += 1
+      }
       socks.forEach(s => s.send(JSON.stringify({
         type: 'message',
         name: sock.name,
         nameColor: sock.nameColor,
         textColor: sock.textColor,
         bgColor: sock.bgColor,
-        body: sanitize(payload.body)
+        body: cleanBody
       })))
     }
   },

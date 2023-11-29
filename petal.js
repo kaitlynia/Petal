@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let server = null,
   controlKeyHeld = false,
+  receivedHistory = false,
   lastMessageGroup = null,
   sanitizeConfig = { ALLOWED_TAGS: ['strong', 'b', 'em', 'i', 'br'], ALLOWED_ATTR: [] },
   userData = {
@@ -136,6 +137,11 @@ document.addEventListener('DOMContentLoaded', () => {
       setUserData('textColor', payload.textColor)
       setUserData('bgColor', payload.bgColor)
       systemMessage(`logged in as <b style="color: ${payload.nameColor};">${payload.name}</b>`)
+      if (!receivedHistory) {
+        send({
+          type: 'history'
+        })
+      }
     },
     'auth-fail-max-names': payload => {
       systemMessage('you have reached the maximum number of names. (10)')
@@ -145,6 +151,17 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     'auth-fail-unknown': payload => {
       systemMessage(`login failed (reason: auth_pair missing). if you see this, please contact lynn with details`)
+    },
+    'history-ok': payload => {
+      receivedHistory = true
+      for (const message in payload.history) {
+        const cleanBody = sanitize(message.body)
+        if (lastMessageGroup === null || lastMessageGroup !== message.name) {
+          addMessageGroup(message, cleanBody)
+        } else (
+          addToLastMessageGroup(message.textColor, cleanBody)
+        )
+      }
     },
     'priv-message': payload => {
       const cleanBody = sanitize(payload.body)
@@ -167,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'message': payload => {
       const cleanBody = sanitize(payload.body)
       if (cleanBody !== '') {
-        if (lastMessageGroup === null || lastMessageGroup != payload.name) {
+        if (lastMessageGroup === null || lastMessageGroup !== payload.name) {
           addMessageGroup(payload, cleanBody)
         } else (
           addToLastMessageGroup(payload.textColor, cleanBody)
