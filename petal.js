@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const addMessageGroup = (payload, messageText) => {
     const scrollHeight = messages.scrollHeight
-    lastMessageGroup = author
+    lastMessageGroup = payload.name
 
     messages.innerHTML += `<div class="msg-group" style="background: ${payload.bgColor};"><img class="avatar" src="https://${rootURL + "/avatars/" + payload.name}.png"><div class="col"><div class="author" style="color: ${payload.nameColor};">${payload.name}</div><div class="msg" style="color: ${payload.textColor};">${messageText}</div></div>`
 
@@ -186,11 +186,11 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     'command-textcolor-ok': payload => {
       setUserData('textColor', payload.color)
-      systemMessage(`background color changed to <b style="color:${userData.textColor}">${userData.textColor}</b>`)
+      systemMessage(`text color changed to <b style="color:${userData.textColor}">${userData.textColor}</b>`)
     },
     'command-bgcolor-ok': payload => {
       setUserData('bgColor', payload.color)
-      systemMessage(`text color changed to <b style="color:${userData.bgColor}">${userData.bgColor}</b>`)
+      systemMessage(`background color changed to <b style="color:${userData.bgColor}">${userData.bgColor}</b>`)
     },
     'command-names-ok': payload => {
       systemMessage(`names: ${payload.names.join(', ')}`)
@@ -343,7 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
           payloadHandlers['command-color-invalid']()
         }
       } else if (userData.textColor !== undefined) {
-        systemMessage(`your name color is <b style="color: ${userData.textColor};">${userData.textColor}</b>`)
+        systemMessage(`your text color is <b style="color: ${userData.textColor};">${userData.textColor}</b>`)
       } else {
         systemMessage('you have the default text color. use /textcolor <color> (ex. /textcolor #ffaaaa)')
       }
