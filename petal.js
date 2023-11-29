@@ -66,10 +66,10 @@ document.addEventListener('DOMContentLoaded', () => {
     tryScrollFrom(scrollHeight)
   }
 
-  const addToLastMessageGroup = messageText => {
+  const addToLastMessageGroup = (textColor, messageText) => {
     const scrollHeight = messages.scrollHeight
 
-    messages.querySelector('.msg-group:last-of-type > .col').innerHTML += `<div class="msg">${messageText}</div>`
+    messages.querySelector('.msg-group:last-of-type > .col').innerHTML += `<div class="msg" style="color: ${textColor};">${messageText}</div>`
 
     tryScrollFrom(scrollHeight)
   }
@@ -170,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (lastMessageGroup === null || lastMessageGroup != payload.name) {
           addMessageGroup(payload, cleanBody)
         } else (
-          addToLastMessageGroup(cleanBody)
+          addToLastMessageGroup(payload.textColor, cleanBody)
         )
       }
     },
