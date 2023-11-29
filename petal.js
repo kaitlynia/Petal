@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     'history-ok': payload => {
       receivedHistory = true
-      for (const message in payload.history) {
+      for (const message of payload.history) {
         const cleanBody = sanitize(message.body)
         if (lastMessageGroup === null || lastMessageGroup !== message.name) {
           addMessageGroup(message, cleanBody)

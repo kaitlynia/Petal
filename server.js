@@ -116,8 +116,8 @@ const payloadHandlers = {
       data.nameToken[sock.name] = sock.auth_pair.token
       data.tokenNames[sock.auth_pair.token] = [sock.name]
       delete sock.auth_pair
-
       saveData()
+
       sockSend(sock, {
         type: 'auth-new-ok',
         name: sock.name
@@ -168,6 +168,7 @@ const payloadHandlers = {
   'message': (sock, payload) => {
     if (payload.hasOwnProperty('body')) {
       const cleanBody = sanitize(payload.body)
+
       data.messageHistory[data.messageHistoryIndex] = {
         name: sock.name,
         nameColor: sock.nameColor,
@@ -180,6 +181,8 @@ const payloadHandlers = {
       } else {
         data.messageHistoryIndex += 1
       }
+      saveData()
+
       socks.forEach(s => s.send(JSON.stringify({
         type: 'message',
         name: sock.name,
