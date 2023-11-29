@@ -160,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'message': payload => {
       const cleanBody = sanitize(payload.body)
       if (cleanBody !== '') {
-        if (lastMessageGroup != payload.name) {
+        if (lastMessageGroup === null || lastMessageGroup != payload.name) {
           addMessageGroup(payload.name, payload.nameColor, cleanBody)
         } else (
           addToLastMessageGroup(cleanBody)
