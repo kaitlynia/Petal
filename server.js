@@ -20,7 +20,7 @@ const wss = new WSServer({
 const sanitizeConfig = { ALLOWED_TAGS: ['strong', 'b', 'em', 'i', 'br'], ALLOWED_ATTR: [] },
 sanitize = s => DOMPurify.sanitize(s, sanitizeConfig),
 validName = s => !/[^0-9a-z]/i.test(s),
-validHexColor = s => /^#[0-9a-f]{3}([0-9a-f]{3})?$/.test(s)
+validHexColor = s => /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(s)
 
 let data = {
   tokenNames: {},
