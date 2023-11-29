@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
       reader.readAsText(contents)
     }
 
-    return sanitize(contents).trim().replace('\n', '<br>')
+    return sanitize(contents).trim().replaceAll('\n', '<br>')
   }
 
   const cleanURL = url => {

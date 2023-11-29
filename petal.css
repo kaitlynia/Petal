@@ -91,7 +91,7 @@ html {
   background-color: var(--grey);
   height: var(--entry-height);
   margin: 0;
-  padding: calc(0.6875rem - 2px) 0 0 calc(0.75rem - 2px);
+  padding: 0.6875rem 0 0 0.75rem;
   resize: none;
   width: 100%;
 }
@@ -100,8 +100,7 @@ html {
 }
 
 .msg-group {
-  padding: 0.5rem 0;
-  margin: 0.5rem 0;
+  padding: 0.5rem;
   display: flex;
   overflow-wrap: anywhere;
 }
@@ -111,7 +110,6 @@ html {
 }
 
 .msg-group .avatar {
-  margin: 0 calc(0.75rem - 2px);
   height: 3rem;
   width: 3rem;
 }
@@ -119,6 +117,7 @@ html {
 .msg-group .col {
   display: flex;
   flex-direction: column;
+  padding-left: 0.5rem;
 }
 
 .msg-group .author {
@@ -126,7 +125,11 @@ html {
 }
 
 #messages > .msg {
-  padding-left: calc(0.75rem - 2px);
+  padding: 0.5rem;
+}
+
+#messages > .msg + .msg {
+  padding-top: 0;
 }
 
 #messages > .msg:last-child {
