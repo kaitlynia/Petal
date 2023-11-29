@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const scrollHeight = messages.scrollHeight
     lastMessageGroup = author
 
-    messages.innerHTML += `<div class="msg-group"><img class="avatar" src="${window.location.href + "/avatars/" + author}.png"><div class="col"><div class="author" style="color: ${authorColor};">${author}</div><div class="msg">${messageText}</div></div>`
+    messages.innerHTML += `<div class="msg-group"><img class="avatar" src="https://${rootURL + "/avatars/" + author}.png"><div class="col"><div class="author" style="color: ${authorColor};">${author}</div><div class="msg">${messageText}</div></div>`
 
     tryScrollFrom(scrollHeight)
   }
