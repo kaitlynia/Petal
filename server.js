@@ -132,7 +132,7 @@ const payloadHandlers = {
     if (sock.name !== 'anon') {
       sockSend(sock, {
         type: 'history-ok',
-        history: data.messageHistory.slice(data.messageHistoryIndex).concat(...data.messageHistory.slice(0, messageHistoryIndex))
+        history: data.messageHistory.slice(data.messageHistoryIndex).concat(...data.messageHistory.slice(0, data.messageHistoryIndex))
       })
     }
   },
