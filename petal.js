@@ -169,6 +169,9 @@ document.addEventListener('DOMContentLoaded', () => {
     'participants-ok': payload => {
       systemMessage(`users here now (${payload.participants.length}): ${payload.participants.join(', ')}`)
     },
+    'participants-update': payload => {
+      systemMessage(`${payload.name} ${payload.action}`)
+    },
     'priv-message': payload => {
       const cleanBody = sanitize(payload.body)
       if (cleanBody !== '') {
