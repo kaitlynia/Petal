@@ -54,6 +54,7 @@ const authToken = (sock, token, name, newName=false) => {
       type: 'auth-fail-max-names'
     }))
   } else if (names !== undefined && (names.includes(name) || newName)) {
+    const action = sock.name === 'anon' ? 'joined' : 'changed name to ' + name
     sock.token = token
     sock.name = name
     sock.nameColor = data.nameColor[name] || defaultNameColor
@@ -70,8 +71,10 @@ const authToken = (sock, token, name, newName=false) => {
       nameColor: sock.nameColor,
       textColor: sock.textColor,
       bgColor: sock.bgColor,
-      history: data.messageHistory
+      history: data.messageHistory.slice(data.messageHistoryIndex).concat(...data.messageHistory.slice(0, data.messageHistoryIndex)),
+      participants: [...socks].map(s => s.name)
     }))
+    updateParticipants(sock, action)
   } else {
     sock.send(JSON.stringify({
       type: 'auth-fail-unauthorized'
@@ -120,21 +123,22 @@ const payloadHandlers = {
 
       sockSend(sock, {
         type: 'auth-new-ok',
-        name: sock.name
+        name: sock.name,
+        history: data.messageHistory.slice(data.messageHistoryIndex).concat(...data.messageHistory.slice(0, data.messageHistoryIndex)),
+        participants: [...socks].map(s => s.name)
       })
+      updateParticipants(sock, 'joined as a new user (say hi!)')
     } else {
       sockSend(sock, {
         type: 'auth-fail-unknown'
       })
     }
   },
-  'history': (sock, payload) => {
-    if (sock.name !== 'anon') {
-      sockSend(sock, {
-        type: 'history-ok',
-        history: data.messageHistory.slice(data.messageHistoryIndex).concat(...data.messageHistory.slice(0, data.messageHistoryIndex))
-      })
-    }
+  'participants': (sock, payload) => {
+    sockSend(sock, {
+      type: 'participants-ok',
+      participants: [...socks].map(s => s.name)
+    })
   },
   'priv-message': (sock, payload) => {
     if (payload.hasOwnProperty('body') && payload.hasOwnProperty('name')) {
@@ -303,6 +307,16 @@ const payloadHandlers = {
 }
 
 const socks = new Set()
+
+const updateParticipants = (sock, action) => {
+  const participantsStr = JSON.stringify({
+    type: 'participants-update',
+    name: sock.name,
+    action: action
+  })
+  ([...socks].filter(s => s.name !== sock.name)).forEach(s => s.send(participantsStr))
+}
+
 wss.on('connection', sock => {
   socks.add(sock)
   sock.name = 'anon'
@@ -314,7 +328,11 @@ wss.on('connection', sock => {
     const payload = JSON.parse(msg)
     payloadHandlers[payload.type](sock, payload)
   })
+
   sock.on('close', () => {
     socks.delete(sock)
+    if (sock.name !== 'anon') {
+      updateParticipants(sock, 'left')
+    }
   })
 })

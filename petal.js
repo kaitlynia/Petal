@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let server = null,
   controlKeyHeld = false,
-  receivedHistory = false,
+  loggedIn = false,
   lastMessageGroup = null,
   sanitizeConfig = { ALLOWED_TAGS: ['strong', 'b', 'em', 'i', 'br'], ALLOWED_ATTR: [] },
   userData = {
@@ -75,6 +75,17 @@ document.addEventListener('DOMContentLoaded', () => {
     tryScrollFrom(scrollHeight)
   }
 
+  const addHistory = history => {
+    for (const message of history) {
+      const cleanBody = sanitize(message.body)
+      if (lastMessageGroup === null || lastMessageGroup !== message.name) {
+        addMessageGroup(message, cleanBody)
+      } else (
+        addToLastMessageGroup(message.textColor, cleanBody)
+      )
+    }
+  }
+
   const systemMessage = (message) => {
     addMessage(message, 'system')
   }
@@ -130,6 +141,9 @@ document.addEventListener('DOMContentLoaded', () => {
       setUserData('name', userData.name)
       setUserData('token', userData.token)
       systemMessage(`logged in as <b>${payload.name}</b>`)
+      loggedIn = true
+      addHistory(payload.history)
+      payloadHandlers['participants-ok'](payload)
     },
     'auth-ok': payload => {
       setUserData('name', payload.name)
@@ -137,10 +151,10 @@ document.addEventListener('DOMContentLoaded', () => {
       setUserData('textColor', payload.textColor)
       setUserData('bgColor', payload.bgColor)
       systemMessage(`logged in as <b style="color: ${payload.nameColor};">${payload.name}</b>`)
-      if (!receivedHistory) {
-        send({
-          type: 'history'
-        })
+      if (!loggedIn) {
+        loggedIn = true
+        addHistory(payload.history)
+        payloadHandlers['participants-ok'](payload)
       }
     },
     'auth-fail-max-names': payload => {
@@ -152,16 +166,8 @@ document.addEventListener('DOMContentLoaded', () => {
     'auth-fail-unknown': payload => {
       systemMessage(`login failed (reason: auth_pair missing). if you see this, please contact lynn with details`)
     },
-    'history-ok': payload => {
-      receivedHistory = true
-      for (const message of payload.history) {
-        const cleanBody = sanitize(message.body)
-        if (lastMessageGroup === null || lastMessageGroup !== message.name) {
-          addMessageGroup(message, cleanBody)
-        } else (
-          addToLastMessageGroup(message.textColor, cleanBody)
-        )
-      }
+    'participants-ok': payload => {
+      systemMessage(`users here now (${payload.participants.length}): ${payload.participants.join(', ')}`)
     },
     'priv-message': payload => {
       const cleanBody = sanitize(payload.body)
@@ -303,6 +309,11 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     help: () => {
       systemMessage(`commands: ${Object.keys(commands).join(', ')}`)
+    },
+    users: () => {
+      send({
+        type: 'participants'
+      })
     },
     name: args => {
       if (args) {
