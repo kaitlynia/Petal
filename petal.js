@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const scrollHeight = messages.scrollHeight
     lastMessageGroup = payload.name
 
-    messages.innerHTML += `<div class="msg-group" style="background: ${payload.bgColor};"><img class="avatar" src="https://${rootURL + "/avatars/" + payload.hasAvatar ? payload.name : 'anon'}.png"><div class="col"><div class="author" style="color: ${payload.nameColor};">${payload.name}</div><div class="msg" style="color: ${payload.textColor};">${messageText}</div></div>`
+    messages.innerHTML += `<div class="msg-group" style="background: ${payload.bgColor};"><img class="avatar" src="https://${rootURL + "/avatars/" + (payload.hasAvatar ? payload.name : 'anon')}.png"><div class="col"><div class="author" style="color: ${payload.nameColor};">${payload.name}</div><div class="msg" style="color: ${payload.textColor};">${messageText}</div></div>`
 
     tryScrollFrom(scrollHeight)
   }
