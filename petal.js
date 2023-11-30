@@ -179,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     },
     'priv-message-fail': payload => {
-      systemMessage(`message could not be sent to <b>${payload.name}</b>. did they change their name?`)
+      systemMessage(`<b>${payload.name}</b> is offline. try again later`)
     },
     'message': payload => {
       const cleanBody = sanitize(payload.body)
