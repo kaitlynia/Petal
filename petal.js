@@ -15,7 +15,10 @@ document.addEventListener('DOMContentLoaded', () => {
   controlKeyHeld = false,
   loggedIn = false,
   lastMessageGroup = null,
-  sanitizeConfig = { ALLOWED_TAGS: ['strong', 'b', 'em', 'i', 'br'], ALLOWED_ATTR: [] },
+  sanitizeConfig = {
+    ALLOWED_TAGS: ['a', 'strong', 'b', 'em', 'i', 'br'],
+    ALLOWED_ATTR: ['href', 'target', 'rel']
+  },
   userData = {
     server: localStorage.getItem('server') || undefined,
     token: localStorage.getItem('token') || undefined,
@@ -103,7 +106,10 @@ document.addEventListener('DOMContentLoaded', () => {
       reader.readAsText(contents)
     }
 
-    return sanitize(contents).trim().replaceAll('\n', '<br>')
+    return sanitize(contents)
+      .trim()
+      .replaceAll('\n', '<br>')
+      .replaceAll(/https?:\/\/[^\s]{2,}/g, '<a href="$&" target="_blank" rel="noopener">$&</a>')
   }
 
   const cleanURL = url => {
