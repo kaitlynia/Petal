@@ -168,14 +168,18 @@ const payloadHandlers = {
   'message': (sock, payload) => {
     if (payload.hasOwnProperty('body')) {
       const cleanBody = sanitize(payload.body)
-
-      data.messageHistory[data.messageHistoryIndex] = {
+      const message = {
+        type: 'message',
+        hasAvatar: data.nameAvatar[sock.name] !== undefined,
         name: sock.name,
         nameColor: sock.nameColor,
         textColor: sock.textColor,
         bgColor: sock.bgColor,
-        body: cleanBody,
+        body: cleanBody
       }
+
+      data.messageHistory[data.messageHistoryIndex] = message
+
       if (data.messageHistoryIndex + 1 >= maxMessageHistory) {
         data.messageHistoryIndex = 0
       } else {
@@ -183,14 +187,9 @@ const payloadHandlers = {
       }
       saveData()
 
-      socks.forEach(s => s.send(JSON.stringify({
-        type: 'message',
-        name: sock.name,
-        nameColor: sock.nameColor,
-        textColor: sock.textColor,
-        bgColor: sock.bgColor,
-        body: cleanBody
-      })))
+      const messageStr = JSON.stringify(message)
+
+      socks.forEach(s => s.send(messageStr))
     }
   },
   'command-names': (sock, payload) => {
