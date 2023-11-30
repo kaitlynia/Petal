@@ -314,7 +314,7 @@ const updateParticipants = (sock, action) => {
     name: sock.name,
     action: action
   })
-  ([...socks].filter(s => s.name !== sock.name)).forEach(s => s.send(participantsStr))
+  ([...socks]).filter(s => s.name !== sock.name).forEach(s => s.send(participantsStr))
 }
 
 wss.on('connection', sock => {
