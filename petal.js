@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     bgColor: localStorage.getItem('bgcolor') || undefined,
     lastUserPrivateMessaged: localStorage.getItem('lastUserPrivateMessaged') || undefined,
     theme: localStorage.getItem('theme') || 'dark',
-    scrollThreshold: localStorage.getItem('scrollThreshold') || 50,
+    scrollThreshold: localStorage.getItem('scrollThreshold') || 100,
     logConnectionEvents: localStorage.getItem('logConnectionEvents') || true,
   },
   avatarImage = document.createElement('img'),
