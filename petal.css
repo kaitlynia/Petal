@@ -29,14 +29,8 @@
 }
 
 html {
-  font-size: 12px;
+  font-size: 16px;
   line-height: 1.4;
-}
-
-@media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
 }
 
 a {
@@ -51,7 +45,7 @@ a {
   display: flex;
   height: 100vh;
   justify-content: space-between;
-  padding: var(--medium);
+  padding: var(--small);
 }
 
 @media (min-width: 768px) {
@@ -76,7 +70,7 @@ a {
 }
 
 #petal {
-  font-size: 3rem;
+  font-size: 1.5rem;
   right: 8px;
   bottom: var(--entry-height);
   opacity: 0.8;
@@ -84,6 +78,12 @@ a {
   position: absolute;
   user-select: none;
   z-index: 1;
+}
+
+@media (min-width: 768px) {
+  #petal {
+    font-size: 3rem;
+  }
 }
 
 #messages {
@@ -116,14 +116,28 @@ a {
 }
 
 .msg-group .avatar {
-  height: 3rem;
-  width: 3rem;
+  height: 2rem;
+  width: 2rem;
+}
+
+@media (min-width: 768px) {
+  .msg-group .avatar {
+    height: 3rem;
+    width: 3rem;
+  }
 }
 
 .msg-group .col {
   display: flex;
   flex-direction: column;
   padding-left: 0.75rem;
+  margin-top: -4px;
+}
+
+@media (min-width: 768px) {
+  .msg-group .col {
+    margin-top: -2px;
+  }
 }
 
 .msg-group .author {
@@ -131,7 +145,7 @@ a {
 }
 
 #messages > .msg {
-  padding: var(--small);
+  padding: var(--small) 0.75rem;
 }
 
 #messages > .msg + .msg {
