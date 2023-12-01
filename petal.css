@@ -106,9 +106,15 @@ a {
 }
 
 .msg-group {
-  padding: 0.75rem;
+  padding: 0.75rem 0.5rem;
   display: flex;
   overflow-wrap: anywhere;
+}
+
+@media (min-width: 768px) {
+  .msg-group {
+    padding: 0.75rem;
+  }
 }
 
 .msg-group:last-child {
@@ -130,13 +136,14 @@ a {
 .msg-group .col {
   display: flex;
   flex-direction: column;
-  padding-left: 0.75rem;
+  padding-left: 0.5rem;
   margin-top: -4px;
 }
 
 @media (min-width: 768px) {
   .msg-group .col {
     margin-top: -2px;
+    padding-left: 0.75rem;
   }
 }
 
