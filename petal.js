@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loggedIn = false,
   lastMessageGroup = null,
   sanitizeConfig = {
-    ALLOWED_TAGS: ['a', 'strong', 'b', 'em', 'i', 'br'],
+    ALLOWED_TAGS: ['a', 'b', 'i', 's', 'u', 'br'],
     ALLOWED_ATTR: ['href', 'target', 'rel']
   },
   userData = {
@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
     addMessage(message, 'system')
   }
 
-  const cleanMessage = (rawContents) => {
+  const processMessage = (rawContents) => {
     let contents = rawContents
 
     if (contents instanceof Blob) {
@@ -108,6 +108,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     return sanitize(contents)
       .trim()
+      .replaceAll(/\*\*([^]*?)\*\*/gm, '<b>$&</b>')
+      .replaceAll(/\*([^]*?)\*/gm, '<i>$&</i>')
+      .replaceAll(/\_\_([^]*?)\_\_/gm, '<u>$&</u>')
+      .replaceAll(/\~\~([^]*?)\~\~/gm, '<s>$&</s>')
       .replaceAll('\n', '<br>')
       .replaceAll(/https?:\/\/[^\s]{2,}/g, '<a href="$&" target="_blank" rel="noopener">$&</a>')
   }
@@ -455,17 +459,17 @@ document.addEventListener('DOMContentLoaded', () => {
       // prevent newline character
       event.preventDefault()
 
-      const cleanContents = cleanMessage(entry.value)
+      const processedMessage = processMessage(entry.value)
 
-      if (cleanContents !== '') {
-        // process entry contents
-        const wasCommand = tryCommand(cleanContents)
+      if (processedMessage !== '') {
+        // send command/message
+        const wasCommand = tryCommand(processedMessage)
 
         if (!wasCommand) {
           try {
             send({
               type: 'message',
-              body: cleanContents
+              body: processedMessage
             })
           } catch (e) {
             console.log(e)

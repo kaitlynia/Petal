@@ -18,7 +18,7 @@ const wss = new WSServer({
 })
 
 const sanitizeConfig = {
-  ALLOWED_TAGS: ['a', 'strong', 'b', 'em', 'i', 'br'],
+  ALLOWED_TAGS: ['a', 'b', 'i', 's', 'u', 'br'],
   ALLOWED_ATTR: ['href', 'target', 'rel']
 },
 sanitize = s => DOMPurify.sanitize(s, sanitizeConfig),
