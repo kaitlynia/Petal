@@ -108,10 +108,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     return sanitize(contents)
       .trim()
-      .replaceAll(/\*\*([^]*?)\*\*/gm, '<b>$&</b>')
-      .replaceAll(/\*([^]*?)\*/gm, '<i>$&</i>')
-      .replaceAll(/\_\_([^]*?)\_\_/gm, '<u>$&</u>')
-      .replaceAll(/\~\~([^]*?)\~\~/gm, '<s>$&</s>')
+      .replaceAll(/\*\*[^]+\*\*/gm, '<b>$&</b>')
+      .replaceAll(/\*[^]+\*/gm, '<i>$&</i>')
+      .replaceAll(/\_\_[^]+\_\_/gm, '<u>$&</u>')
+      .replaceAll(/\~\~[^]+\~\~/gm, '<s>$&</s>')
       .replaceAll('\n', '<br>')
       .replaceAll(/https?:\/\/[^\s]{2,}/g, '<a href="$&" target="_blank" rel="noopener">$&</a>')
   }
