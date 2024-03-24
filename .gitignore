@@ -2,6 +2,7 @@
 /*.pem
 /*.crt
 /*.key
+/bun.lockb
 /data.json
 /node_modules/
 /package.json
