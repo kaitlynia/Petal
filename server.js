@@ -6,28 +6,27 @@ createDOMPurify = require('dompurify'),
 JSDOM = require('jsdom').JSDOM
 
 const dataPath = './data.json'
+let data = {
+  admins: [],
+  cert: 'fullchain.pem',
+  key: 'privkey.pem',
+  port: 8080,
+  tokenNames: {},
+  nameToken: {},
+  nameColor: {},
+  nameTextColor: {},
+  nameBgColor: {},
+  nameAvatar: {},
+  messageHistory: [],
+  messageHistoryIndex: 0
+}
+
 const saveData = () => {
   fs.writeFileSync(dataPath, JSON.stringify(data))
 }
 
 if (fs.existsSync(dataPath)) {
-  const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'))
-} else {
-  const data = {
-    admins: [],
-    cert: 'fullchain.pem',
-    key: 'privkey.pem',
-    port: 8080,
-    tokenNames: {},
-    nameToken: {},
-    nameColor: {},
-    nameTextColor: {},
-    nameBgColor: {},
-    nameAvatar: {},
-    messageHistory: [],
-    messageHistoryIndex: 0
-  }
-  saveData()
+  data = JSON.parse(fs.readFileSync(dataPath, 'utf8'))
 }
 
 const window = new JSDOM('').window
