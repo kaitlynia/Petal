@@ -31,7 +31,10 @@ if (fs.existsSync(dataPath)) {
 
 const window = new JSDOM('').window
 const DOMPurify = createDOMPurify(window)
-const https_server = https.createServer({ cert: data.cert, key: data.key })
+const https_server = https.createServer({
+  cert: fs.readFileSync(data.cert),
+  key: fs.readFileSync(data.key),
+})
 https_server.listen(data.port)
 
 const wss = new WSServer({
