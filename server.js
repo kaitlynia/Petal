@@ -5,13 +5,35 @@ WSServer = require('ws').Server,
 createDOMPurify = require('dompurify'),
 JSDOM = require('jsdom').JSDOM
 
+const dataPath = './data.json'
+const saveData = () => {
+  fs.writeFileSync(dataPath, JSON.stringify(data))
+}
+
+if (fs.existsSync(dataPath)) {
+  const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'))
+} else {
+  const data = {
+    admins: [],
+    cert: 'fullchain.pem',
+    key: 'privkey.pem',
+    port: 8080,
+    tokenNames: {},
+    nameToken: {},
+    nameColor: {},
+    nameTextColor: {},
+    nameBgColor: {},
+    nameAvatar: {},
+    messageHistory: [],
+    messageHistoryIndex: 0
+  }
+  saveData()
+}
+
 const window = new JSDOM('').window
 const DOMPurify = createDOMPurify(window)
-const https_key = fs.readFileSync('./privkey.pem', 'utf8')
-const https_cert = fs.readFileSync('./fullchain.pem', 'utf8')
-const https_server = https.createServer({ key: https_key, cert: https_cert })
-const dataPath = './data.json'
-https_server.listen(8080)
+const https_server = https.createServer({ cert: data.cert, key: data.key })
+https_server.listen(data.port)
 
 const wss = new WSServer({
   server: https_server
@@ -24,29 +46,11 @@ const sanitizeConfig = {
 sanitize = s => DOMPurify.sanitize(s, sanitizeConfig),
 validName = s => !/[^0-9a-z]/i.test(s),
 validHexColor = s => /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(s),
+
 defaultNameColor = '#aaaaaa',
 defaultTextColor = '#ffffff',
 defaultBgColor = '#202020',
 maxMessageHistory = 50
-
-let data = {
-  tokenNames: {},
-  nameToken: {},
-  nameColor: {},
-  nameTextColor: {},
-  nameBgColor: {},
-  nameAvatar: {},
-  messageHistory: [],
-  messageHistoryIndex: 0,
-}
-
-if (fs.existsSync(dataPath)) {
-  data = JSON.parse(fs.readFileSync(dataPath, 'utf8'))
-}
-
-const saveData = () => {
-  fs.writeFileSync(dataPath, JSON.stringify(data))
-}
 
 const sockSend = (sock, payload) => sock.send(JSON.stringify(payload))
 
