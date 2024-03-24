@@ -278,6 +278,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const connect = url => {
+    url = 'wss://'.concat(url.replace('wss://', '').replace('ws://', ''))
+    if (url.endsWith('/')) {
+      url = url.slice(0, -1)
+    }
+
     if (userData.logConnectionEvents) {
       systemMessage(`connecting to ${cleanURL(url)}...`)
     }
