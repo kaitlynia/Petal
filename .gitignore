@@ -1,8 +1,8 @@
 # Project-specific files
+/*.pem
+/*.crt
+/*.key
 /data.json
-/fullchain.pem
-/privkey.pem
 /node_modules/
 /package.json
 /package-lock.json
-/test.*
