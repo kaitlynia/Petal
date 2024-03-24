@@ -282,9 +282,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (url.endsWith('/')) {
       url = url.slice(0, -1)
     }
-    if (url.split(':').length <= 2) {
-      url = url.concat(':8080')
-    }
 
     if (userData.logConnectionEvents) {
       systemMessage(`connecting to ${cleanURL(url)}...`)
