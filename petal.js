@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ALLOWED_ATTR: ['href', 'target', 'rel']
   },
   userData = {
-    server: localStorage.getItem('server') || undefined,
+    server: localStorage.getItem('server') || 'chat.lynnya.live',
     token: localStorage.getItem('token') || undefined,
     name: localStorage.getItem('name') || undefined,
     color: localStorage.getItem('color') || undefined,
@@ -524,3 +524,318 @@ document.addEventListener('DOMContentLoaded', () => {
     systemMessage(`welcome to Petal! use /connect <url> to connect to a server. (try ${rootURL})`)
   }
 })
+
+/* From https://github.com/bluenviron/mediamtx/blob/main/internal/servers/webrtc/read_index.html */
+/* MediaMTX is MIT-licensed */
+
+const retryPause = 2000;
+
+const stream = document.getElementById('stream');
+const streamInfo = document.getElementById('streamInfo');
+
+let pc = null;
+let restartTimeout = null;
+let sessionUrl = '';
+let offerData = '';
+let queuedCandidates = [];
+let defaultControls = false;
+
+const setStreamInfo = (str) => {
+	if (str !== '') {
+		video.controls = false;
+	} else {
+		video.controls = defaultControls;
+	}
+	streamInfo.innerText = str;
+};
+
+const unquoteCredential = (v) => (
+	JSON.parse(`"${v}"`)
+);
+
+const linkToIceServers = (links) => (
+	(links !== null) ? links.split(', ').map((link) => {
+		const m = link.match(/^<(.+?)>; rel="ice-server"(; username="(.*?)"; credential="(.*?)"; credential-type="password")?/i);
+		const ret = {
+			urls: [m[1]],
+		};
+
+		if (m[3] !== undefined) {
+			ret.username = unquoteCredential(m[3]);
+			ret.credential = unquoteCredential(m[4]);
+			ret.credentialType = 'password';
+		}
+
+		return ret;
+	}) : []
+);
+
+const parseOffer = (offer) => {
+	const ret = {
+		iceUfrag: '',
+		icePwd: '',
+		medias: [],
+	};
+
+	for (const line of offer.split('\r\n')) {
+		if (line.startsWith('m=')) {
+			ret.medias.push(line.slice('m='.length));
+		} else if (ret.iceUfrag === '' && line.startsWith('a=ice-ufrag:')) {
+			ret.iceUfrag = line.slice('a=ice-ufrag:'.length);
+		} else if (ret.icePwd === '' && line.startsWith('a=ice-pwd:')) {
+			ret.icePwd = line.slice('a=ice-pwd:'.length);
+		}
+	}
+
+	return ret;
+};
+
+const enableStereoOpus = (section) => {
+	let opusPayloadFormat = '';
+	let lines = section.split('\r\n');
+
+	for (let i = 0; i < lines.length; i++) {
+		if (lines[i].startsWith('a=rtpmap:') && lines[i].toLowerCase().includes('opus/')) {
+			opusPayloadFormat = lines[i].slice('a=rtpmap:'.length).split(' ')[0];
+			break;
+		}
+	}
+
+	if (opusPayloadFormat === '') {
+		return section;
+	}
+
+	for (let i = 0; i < lines.length; i++) {
+		if (lines[i].startsWith('a=fmtp:' + opusPayloadFormat + ' ')) {
+			if (!lines[i].includes('stereo')) {
+				lines[i] += ';stereo=1';
+			}
+			if (!lines[i].includes('sprop-stereo')) {
+				lines[i] += ';sprop-stereo=1';
+			}
+		}
+	}
+
+	return lines.join('\r\n');
+};
+
+const editOffer = (offer) => {
+	const sections = offer.sdp.split('m=');
+
+	for (let i = 0; i < sections.length; i++) {
+		const section = sections[i];
+		if (section.startsWith('audio')) {
+			sections[i] = enableStereoOpus(section);
+		}
+	}
+
+	offer.sdp = sections.join('m=');
+};
+
+const generateSdpFragment = (od, candidates) => {
+	const candidatesByMedia = {};
+	for (const candidate of candidates) {
+		const mid = candidate.sdpMLineIndex;
+		if (candidatesByMedia[mid] === undefined) {
+			candidatesByMedia[mid] = [];
+		}
+		candidatesByMedia[mid].push(candidate);
+	}
+
+	let frag = 'a=ice-ufrag:' + od.iceUfrag + '\r\n'
+		+ 'a=ice-pwd:' + od.icePwd + '\r\n';
+
+	let mid = 0;
+
+	for (const media of od.medias) {
+		if (candidatesByMedia[mid] !== undefined) {
+			frag += 'm=' + media + '\r\n'
+				+ 'a=mid:' + mid + '\r\n';
+
+			for (const candidate of candidatesByMedia[mid]) {
+				frag += 'a=' + candidate.candidate + '\r\n';
+			}
+		}
+		mid++;
+	}
+
+	return frag;
+};
+
+const loadStream = () => {
+	requestICEServers();
+};
+
+const onError = (err) => {
+	if (restartTimeout === null) {
+		setStreamInfo(err + ', retrying in some seconds');
+
+		if (pc !== null) {
+			pc.close();
+			pc = null;
+		}
+
+		restartTimeout = window.setTimeout(() => {
+			restartTimeout = null;
+			loadStream();
+		}, retryPause);
+
+		if (sessionUrl) {
+			fetch(sessionUrl, {
+				method: 'DELETE',
+			});
+		}
+		sessionUrl = '';
+
+		queuedCandidates = [];
+	}
+};
+
+const sendLocalCandidates = (candidates) => {
+	fetch(sessionUrl + window.location.search, {
+		method: 'PATCH',
+		headers: {
+			'Content-Type': 'application/trickle-ice-sdpfrag',
+			'If-Match': '*',
+		},
+		body: generateSdpFragment(offerData, candidates),
+	})
+		.then((res) => {
+			switch (res.status) {
+			case 204:
+				break;
+			case 404:
+				throw new Error('stream not found');
+			default:
+				throw new Error(`bad status code ${res.status}`);
+			}
+		})
+		.catch((err) => {
+			onError(err.toString());
+		});
+};
+
+const onLocalCandidate = (evt) => {
+	if (restartTimeout !== null) {
+		return;
+	}
+
+	if (evt.candidate !== null) {
+		if (sessionUrl === '') {
+			queuedCandidates.push(evt.candidate);
+		} else {
+			sendLocalCandidates([evt.candidate])
+		}
+	}
+};
+
+const onRemoteAnswer = (sdp) => {
+	if (restartTimeout !== null) {
+		return;
+	}
+
+	pc.setRemoteDescription(new RTCSessionDescription({
+		type: 'answer',
+		sdp,
+	}));
+
+	if (queuedCandidates.length !== 0) {
+		sendLocalCandidates(queuedCandidates);
+		queuedCandidates = [];
+	}
+};
+
+const sendOffer = (offer) => {
+	fetch(new URL('whep', window.location.href) + window.location.search, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/sdp',
+		},
+		body: offer.sdp,
+	})
+		.then((res) => {
+			switch (res.status) {
+			case 201:
+				break;
+			case 404:
+				throw new Error('stream not found');
+			default:
+				throw new Error(`bad status code ${res.status}`);
+			}
+			sessionUrl = new URL(res.headers.get('location'), window.location.href).toString();
+			return res.text();
+		})
+		.then((sdp) => onRemoteAnswer(sdp))
+		.catch((err) => {
+			onError(err.toString());
+		});
+};
+
+const createOffer = () => {
+	pc.createOffer()
+		.then((offer) => {
+			editOffer(offer);
+			offerData = parseOffer(offer.sdp);
+			pc.setLocalDescription(offer);
+			sendOffer(offer);
+		});
+};
+
+const onConnectionState = () => {
+	if (restartTimeout !== null) {
+		return;
+	}
+
+	if (pc.iceConnectionState === 'disconnected') {
+		onError('peer connection disconnected');
+	}
+};
+
+const onTrack = (evt) => {
+	setStreamInfo('');
+	video.srcObject = evt.streams[0];
+};
+
+const requestICEServers = () => {
+	fetch(new URL('whep', 'https://stream.lynnya.live'), {
+		method: 'OPTIONS',
+	})
+		.then((res) => {
+			pc = new RTCPeerConnection({
+				iceServers: linkToIceServers(res.headers.get('Link')),
+				// https://webrtc.org/getting-started/unified-plan-transition-guide
+				sdpSemantics: 'unified-plan',
+			});
+
+			const direction = 'sendrecv';
+			pc.addTransceiver('video', { direction });
+			pc.addTransceiver('audio', { direction });
+
+			pc.onicecandidate = (evt) => onLocalCandidate(evt);
+			pc.oniceconnectionstatechange = () => onConnectionState();
+			pc.ontrack = (evt) => onTrack(evt);
+
+			createOffer();
+		})
+		.catch((err) => {
+			onError(err.toString());
+		});
+};
+
+const parseBoolString = (str, defaultVal) => {
+	str = (str || '');
+
+	if (['1', 'yes', 'true'].includes(str.toLowerCase())) {
+		return true;
+	}
+	if (['0', 'no', 'false'].includes(str.toLowerCase())) {
+		return false;
+	}
+	return defaultVal;
+};
+
+const whepInit = () => {
+	loadStream();
+};
+
+document.addEventListener('DOMContentLoaded', whepInit);

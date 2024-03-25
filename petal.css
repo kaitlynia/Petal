@@ -55,7 +55,6 @@ a {
 }
 
 #stream {
-  border: none;
   height: 100%;
   max-width: calc(75% - var(--small));
   width: 100%;
