@@ -542,9 +542,9 @@ let defaultControls = false;
 
 const setStreamInfo = (str) => {
 	if (str !== '') {
-		video.controls = false;
+		stream.controls = false;
 	} else {
-		video.controls = defaultControls;
+		stream.controls = defaultControls;
 	}
 	streamInfo.innerText = str;
 };
@@ -793,7 +793,7 @@ const onConnectionState = () => {
 
 const onTrack = (evt) => {
 	setStreamInfo('');
-	video.srcObject = evt.streams[0];
+	stream.srcObject = evt.streams[0];
 };
 
 const requestICEServers = () => {
