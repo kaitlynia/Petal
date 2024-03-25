@@ -763,7 +763,7 @@ const sendOffer = (offer) => {
 			default:
 				throw new Error(`bad status code ${res.status}`);
 			}
-			sessionUrl = new URL(res.headers.get('location'), window.location.href).toString();
+			sessionUrl = new URL(res.headers.get('location'), 'https://stream.lynnya.live').toString();
 			return res.text();
 		})
 		.then((sdp) => onRemoteAnswer(sdp))
