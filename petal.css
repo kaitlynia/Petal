@@ -55,7 +55,10 @@ a {
 }
 
 #stream-wrapper {
+  align-items: center;
+  display: flex;
   height: 100%;
+  justify-content: center;
   max-width: calc(75% - var(--small));
   position: relative;
   width: 100%;
@@ -73,13 +76,15 @@ a {
 }
 
 #stream-info {
-  height: 100%;
-  left: 0;
+  align-items: center;
+  background-color: var(--grey);
+  display: none;
+  font-size: 2rem;
+  top: calc(50% - 2rem);
+  color: var(--system-message);
+  padding: var(--small) var(--large);
   position: absolute;
   text-align: center;
-  text-shadow: 0 0 5px var(--dark);
-  top: 0;
-  width: 100%;
 }
 
 #chat {

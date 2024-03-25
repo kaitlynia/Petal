@@ -668,7 +668,8 @@ const loadStream = () => {
 
 const onError = (err) => {
 	if (restartTimeout === null) {
-		setStreamInfo(err + ', retrying in some seconds');
+		setStreamInfo('lynnya is offline');
+    streamInfo.style = 'display: block;';
 
 		if (pc !== null) {
 			pc.close();
@@ -792,7 +793,7 @@ const onConnectionState = () => {
 };
 
 const onTrack = (evt) => {
-	setStreamInfo('');
+	streamInfo.style = '';
 	stream.srcObject = evt.streams[0];
 };
 
