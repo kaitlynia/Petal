@@ -54,9 +54,23 @@ a {
   }
 }
 
+#stream {
+  border: none;
+  height: 100%;
+  max-width: calc(75% - var(--small));
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  #stream {
+    max-width: calc(75% - var(--large));
+  }
+}
+
 #chat {
   height: 100%;
-  max-width: 760px;
+  margin-left: auto;
+  max-width: 25%;
   position: relative;
   width: 100%;
 }
@@ -65,8 +79,6 @@ a {
   background-color: var(--dark);
   color: #FFFFFF;
   font-size: var(--medium);
-  margin-left: auto;
-  margin-right: auto;
 }
 
 #petal {
