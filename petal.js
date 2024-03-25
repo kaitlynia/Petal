@@ -503,7 +503,7 @@ document.addEventListener('DOMContentLoaded', () => {
   })
 
   avatarImage.addEventListener('load', event => {
-    avatarCanvasContext.clearRect(0, 0, avatarCanvas.width, avatarCanvas.height);
+    avatarCanvasContext.clearRect(0, 0, avatarCanvas.width, avatarCanvas.height)
     avatarCanvasContext.drawImage(avatarImage, 0, 0, avatarCanvas.width, avatarCanvas.height)
 
     send({
@@ -528,169 +528,171 @@ document.addEventListener('DOMContentLoaded', () => {
 /* From https://github.com/bluenviron/mediamtx/blob/main/internal/servers/webrtc/read_index.html */
 /* MediaMTX is MIT-licensed */
 
-const retryPause = 2000;
+const retryMinute = 60000
+const initialRetryDelay = 2000
+const retryDelayScalar = 1.5
+let retryDelay = initialRetryDelay
 
-const stream = document.getElementById('stream');
-const streamInfo = document.getElementById('stream-info');
+const stream = document.getElementById('stream')
+const streamInfo = document.getElementById('stream-info')
 
-let pc = null;
-let restartTimeout = null;
-let sessionUrl = '';
-let offerData = '';
-let queuedCandidates = [];
-let defaultControls = false;
+let pc = null
+let restartTimeout = null
+let sessionUrl = ''
+let offerData = ''
+let queuedCandidates = []
 
-const setStreamInfo = (str) => {
-	if (str !== '') {
-		stream.controls = false;
-	} else {
-		stream.controls = defaultControls;
-	}
-	streamInfo.innerText = str;
-};
+const getOfflineTime = delay => {
+  const days = delay / 864000000
+  if (days >= 1) return `${Math.floor(days)}d`
+  const hours = delay / 3600000
+  if (hours >= 1) return `${Math.floor(hours)}h`
+  const minutes = delay / 60000
+  if (minutes >= 1) return `${Math.floor(minutes)}m`
+  return `${Math.floor(delay / 1000)}s`
+}
 
-const unquoteCredential = (v) => (
+const showStreamInfo = str => {
+	streamInfo.innerText = str
+  streamInfo.style = 'display: block;'
+}
+
+const unquoteCredential = v => (
 	JSON.parse(`"${v}"`)
-);
+)
 
-const linkToIceServers = (links) => (
-	(links !== null) ? links.split(', ').map((link) => {
-		const m = link.match(/^<(.+?)>; rel="ice-server"(; username="(.*?)"; credential="(.*?)"; credential-type="password")?/i);
-		const ret = {
-			urls: [m[1]],
-		};
+const linkToIceServers = links => (
+	(links !== null) ? links.split(', ').map(link => {
+		const m = link.match(/^<(.+?)>; rel="ice-server"(; username="(.*?)"; credential="(.*?)"; credential-type="password")?/i)
+		const ret = {urls: [m[1]]}
 
 		if (m[3] !== undefined) {
-			ret.username = unquoteCredential(m[3]);
-			ret.credential = unquoteCredential(m[4]);
-			ret.credentialType = 'password';
+			ret.username = unquoteCredential(m[3])
+			ret.credential = unquoteCredential(m[4])
+			ret.credentialType = 'password'
 		}
 
-		return ret;
+		return ret
 	}) : []
-);
+)
 
-const parseOffer = (offer) => {
-	const ret = {
-		iceUfrag: '',
-		icePwd: '',
-		medias: [],
-	};
+const parseOffer = offer => {
+	const ret = {iceUfrag: '', icePwd: '', medias: []}
 
 	for (const line of offer.split('\r\n')) {
 		if (line.startsWith('m=')) {
-			ret.medias.push(line.slice('m='.length));
+			ret.medias.push(line.slice('m='.length))
 		} else if (ret.iceUfrag === '' && line.startsWith('a=ice-ufrag:')) {
-			ret.iceUfrag = line.slice('a=ice-ufrag:'.length);
+			ret.iceUfrag = line.slice('a=ice-ufrag:'.length)
 		} else if (ret.icePwd === '' && line.startsWith('a=ice-pwd:')) {
-			ret.icePwd = line.slice('a=ice-pwd:'.length);
+			ret.icePwd = line.slice('a=ice-pwd:'.length)
 		}
 	}
 
-	return ret;
-};
+	return ret
+}
 
-const enableStereoOpus = (section) => {
-	let opusPayloadFormat = '';
-	let lines = section.split('\r\n');
+const enableStereoOpus = section => {
+	let opusPayloadFormat = ''
+	let lines = section.split('\r\n')
 
-	for (let i = 0; i < lines.length; i++) {
-		if (lines[i].startsWith('a=rtpmap:') && lines[i].toLowerCase().includes('opus/')) {
-			opusPayloadFormat = lines[i].slice('a=rtpmap:'.length).split(' ')[0];
-			break;
+	for (let line of lines) {
+    line = line.toLowerCase()
+		if (line.startsWith('a=rtpmap:') && line.includes('opus/')) {
+			opusPayloadFormat = `a=fmtp:${line.slice(9).split(' ')[0]} `
+			break
 		}
 	}
 
 	if (opusPayloadFormat === '') {
-		return section;
+		return section
 	}
 
 	for (let i = 0; i < lines.length; i++) {
-		if (lines[i].startsWith('a=fmtp:' + opusPayloadFormat + ' ')) {
-			if (!lines[i].includes('stereo')) {
-				lines[i] += ';stereo=1';
+    const line = lines[i]
+		if (line.startsWith(opusPayloadFormat)) {
+			if (!line.includes('stereo')) {
+				lines[i] += ';stereo=1'
 			}
-			if (!lines[i].includes('sprop-stereo')) {
-				lines[i] += ';sprop-stereo=1';
+			if (!line.includes('sprop-stereo')) {
+				lines[i] += ';sprop-stereo=1'
 			}
 		}
 	}
 
-	return lines.join('\r\n');
-};
+	return lines.join('\r\n')
+}
 
 const editOffer = (offer) => {
-	const sections = offer.sdp.split('m=');
+	const sections = offer.sdp.split('m=')
 
 	for (let i = 0; i < sections.length; i++) {
-		const section = sections[i];
+		const section = sections[i]
 		if (section.startsWith('audio')) {
-			sections[i] = enableStereoOpus(section);
+			sections[i] = enableStereoOpus(section)
 		}
 	}
 
-	offer.sdp = sections.join('m=');
-};
+	offer.sdp = sections.join('m=')
+}
 
 const generateSdpFragment = (od, candidates) => {
-	const candidatesByMedia = {};
+	const candidatesByMedia = {}
 	for (const candidate of candidates) {
-		const mid = candidate.sdpMLineIndex;
+		const mid = candidate.sdpMLineIndex
 		if (candidatesByMedia[mid] === undefined) {
-			candidatesByMedia[mid] = [];
+			candidatesByMedia[mid] = []
 		}
-		candidatesByMedia[mid].push(candidate);
+		candidatesByMedia[mid].push(candidate)
 	}
 
-	let frag = 'a=ice-ufrag:' + od.iceUfrag + '\r\n'
-		+ 'a=ice-pwd:' + od.icePwd + '\r\n';
+	let frag = `a=ice-ufrag:${od.iceUfrag}\r\na=ice-pwd:${od.icePwd}\r\n`
+	let mid = 0
 
-	let mid = 0;
-
-	for (const media of od.medias) {
-		if (candidatesByMedia[mid] !== undefined) {
-			frag += 'm=' + media + '\r\n'
-				+ 'a=mid:' + mid + '\r\n';
-
-			for (const candidate of candidatesByMedia[mid]) {
-				frag += 'a=' + candidate.candidate + '\r\n';
+	for (let mid = 0; mid < od.medias.length; mid++) {
+    const candidates = candidatesByMedia[mid]
+		if (candidates !== undefined) {
+			frag += `m=${od.medias[mid]}\r\na=mid:${mid}\r\n`
+			for (const candidate of candidates) {
+				frag += `a=${candidate.candidate}\r\n`
 			}
 		}
-		mid++;
 	}
 
-	return frag;
-};
+	return frag
+}
 
 const loadStream = () => {
-	requestICEServers();
-};
+	requestICEServers()
+}
 
 const onError = (err) => {
 	if (restartTimeout === null) {
-		setStreamInfo('lynnya is offline');
-    streamInfo.style = 'display: block;';
+    if (offlineSince === null) {
+      offlineSince = Date.now()
+    }
+		showStreamInfo(`lynnya is offline (${getOfflineTime(Date.now() - offlineSince)})`)
 
 		if (pc !== null) {
-			pc.close();
-			pc = null;
+			pc.close()
+			pc = null
 		}
 
 		restartTimeout = window.setTimeout(() => {
-			restartTimeout = null;
-			loadStream();
-		}, retryPause);
+			restartTimeout = null
+			loadStream()
+		}, retryDelay)
+
+    retryDelay = retryDelay * retryDelayScalar
 
 		if (sessionUrl) {
-			fetch(sessionUrl, {
-				method: 'DELETE',
-			});
+			fetch(sessionUrl, {method: 'DELETE'})
 		}
-		sessionUrl = '';
+		sessionUrl = ''
 
-		queuedCandidates = [];
+		queuedCandidates = []
 	}
-};
+}
 
 const sendLocalCandidates = (candidates) => {
 	fetch(sessionUrl + window.location.search, {
@@ -701,142 +703,135 @@ const sendLocalCandidates = (candidates) => {
 		},
 		body: generateSdpFragment(offerData, candidates),
 	})
-		.then((res) => {
+		.then(res => {
 			switch (res.status) {
 			case 204:
-				break;
+				break
 			case 404:
-				throw new Error('stream not found');
+				showStreamInfo('stream not found')
 			default:
-				throw new Error(`bad status code ${res.status}`);
+				showStreamInfo(`bad status code ${res.status}`)
 			}
 		})
-		.catch((err) => {
-			onError(err.toString());
-		});
-};
+		.catch(err => {
+			onError(err.toString())
+		})
+}
 
 const onLocalCandidate = (evt) => {
 	if (restartTimeout !== null) {
-		return;
+		return
 	}
 
 	if (evt.candidate !== null) {
 		if (sessionUrl === '') {
-			queuedCandidates.push(evt.candidate);
+			queuedCandidates.push(evt.candidate)
 		} else {
 			sendLocalCandidates([evt.candidate])
 		}
 	}
-};
+}
 
 const onRemoteAnswer = (sdp) => {
 	if (restartTimeout !== null) {
-		return;
+		return
 	}
+
+  offlineSince = null
+  retryDelay = initialRetryDelay
 
 	pc.setRemoteDescription(new RTCSessionDescription({
-		type: 'answer',
-		sdp,
-	}));
+		type: 'answer', sdp
+	}))
 
 	if (queuedCandidates.length !== 0) {
-		sendLocalCandidates(queuedCandidates);
-		queuedCandidates = [];
+		sendLocalCandidates(queuedCandidates)
+		queuedCandidates = []
 	}
-};
+}
 
 const sendOffer = (offer) => {
-	fetch(new URL('whep', 'https://stream.lynnya.live'), {
+	fetch('https://stream.lynnya.live/whep', {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/sdp',
-		},
+		headers: {'Content-Type': 'application/sdp'},
 		body: offer.sdp,
 	})
-		.then((res) => {
+		.then(res => {
 			switch (res.status) {
 			case 201:
-				break;
+				break
 			case 404:
-				throw new Error('stream not found');
+				throw new Error('stream not found')
 			default:
-				throw new Error(`bad status code ${res.status}`);
+				throw new Error(`bad status code ${res.status}`)
 			}
-			sessionUrl = new URL(res.headers.get('location'), 'https://stream.lynnya.live').toString();
-			return res.text();
+			sessionUrl = new URL(res.headers.get('location'), 'https://stream.lynnya.live').toString()
+			return res.text()
 		})
-		.then((sdp) => onRemoteAnswer(sdp))
-		.catch((err) => {
-			onError(err.toString());
-		});
-};
+		.then(sdp => onRemoteAnswer(sdp))
+		.catch(err => onError(err.toString()))
+}
 
 const createOffer = () => {
 	pc.createOffer()
-		.then((offer) => {
-			editOffer(offer);
-			offerData = parseOffer(offer.sdp);
-			pc.setLocalDescription(offer);
-			sendOffer(offer);
-		});
-};
+		.then(offer => {
+			editOffer(offer)
+			offerData = parseOffer(offer.sdp)
+			pc.setLocalDescription(offer)
+			sendOffer(offer)
+		})
+}
 
 const onConnectionState = () => {
 	if (restartTimeout !== null) {
-		return;
+		return
 	}
 
 	if (pc.iceConnectionState === 'disconnected') {
-		onError('peer connection disconnected');
+		onError('peer connection disconnected')
 	}
-};
+}
 
 const onTrack = (evt) => {
-	streamInfo.style = '';
-	stream.srcObject = evt.streams[0];
-};
+	streamInfo.style = ''
+	stream.srcObject = evt.streams[0]
+}
 
 const requestICEServers = () => {
-	fetch(new URL('whep', 'https://stream.lynnya.live'), {
-		method: 'OPTIONS',
-	})
-		.then((res) => {
+	fetch('https://stream.lynnya.live/whep', {method: 'OPTIONS'})
+		.then(res => {
 			pc = new RTCPeerConnection({
 				iceServers: linkToIceServers(res.headers.get('Link')),
-				// https://webrtc.org/getting-started/unified-plan-transition-guide
 				sdpSemantics: 'unified-plan',
-			});
+			})
 
-			const direction = 'sendrecv';
-			pc.addTransceiver('video', { direction });
-			pc.addTransceiver('audio', { direction });
+			const direction = 'sendrecv'
+			pc.addTransceiver('video', { direction })
+			pc.addTransceiver('audio', { direction })
 
-			pc.onicecandidate = (evt) => onLocalCandidate(evt);
-			pc.oniceconnectionstatechange = () => onConnectionState();
-			pc.ontrack = (evt) => onTrack(evt);
+			pc.onicecandidate = evt => onLocalCandidate(evt)
+			pc.oniceconnectionstatechange = () => onConnectionState()
+			pc.ontrack = evt => onTrack(evt)
 
-			createOffer();
+			createOffer()
 		})
-		.catch((err) => {
-			onError(err.toString());
-		});
-};
+		.catch(err => onError(err.toString()))
+}
 
 const parseBoolString = (str, defaultVal) => {
-	str = (str || '');
+	str = (str || '')
 
 	if (['1', 'yes', 'true'].includes(str.toLowerCase())) {
-		return true;
+		return true
 	}
 	if (['0', 'no', 'false'].includes(str.toLowerCase())) {
-		return false;
+		return false
 	}
-	return defaultVal;
-};
+	return defaultVal
+}
 
 const whepInit = () => {
-	loadStream();
-};
+	loadStream()
+}
 
-document.addEventListener('DOMContentLoaded', whepInit);
+document.addEventListener('DOMContentLoaded', whepInit)
