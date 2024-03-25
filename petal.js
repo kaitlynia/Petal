@@ -746,7 +746,7 @@ const onRemoteAnswer = (sdp) => {
 };
 
 const sendOffer = (offer) => {
-	fetch(new URL('whep', 'stream.lynnya.live'), {
+	fetch(new URL('whep', 'https://stream.lynnya.live'), {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/sdp',
