@@ -537,6 +537,7 @@ const stream = document.getElementById('stream')
 const streamInfo = document.getElementById('stream-info')
 
 let pc = null
+let offlineSince = null
 let restartTimeout = null
 let sessionUrl = ''
 let offerData = ''
