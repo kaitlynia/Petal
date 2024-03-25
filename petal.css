@@ -54,16 +54,32 @@ a {
   }
 }
 
-#stream {
+#stream-wrapper {
   height: 100%;
   max-width: calc(75% - var(--small));
+  position: relative;
   width: 100%;
 }
 
 @media (min-width: 768px) {
-  #stream {
+  #stream-wrapper {
     max-width: calc(75% - var(--large));
   }
+}
+
+#stream {
+  height: 100%;
+  width: 100%;
+}
+
+#stream-info {
+  height: 100%;
+  left: 0;
+  position: absolute;
+  text-align: center;
+  text-shadow: 0 0 5px var(--dark);
+  top: 0;
+  width: 100%;
 }
 
 #chat {

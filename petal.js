@@ -531,7 +531,7 @@ document.addEventListener('DOMContentLoaded', () => {
 const retryPause = 2000;
 
 const stream = document.getElementById('stream');
-const streamInfo = document.getElementById('streamInfo');
+const streamInfo = document.getElementById('stream-info');
 
 let pc = null;
 let restartTimeout = null;
@@ -746,7 +746,7 @@ const onRemoteAnswer = (sdp) => {
 };
 
 const sendOffer = (offer) => {
-	fetch(new URL('whep', window.location.href) + window.location.search, {
+	fetch(new URL('whep', 'stream.lynnya.live'), {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/sdp',
