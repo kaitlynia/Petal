@@ -648,7 +648,6 @@ const generateSdpFragment = (od, candidates) => {
 	}
 
 	let frag = `a=ice-ufrag:${od.iceUfrag}\r\na=ice-pwd:${od.icePwd}\r\n`
-	let mid = 0
 
 	for (let mid = 0; mid < od.medias.length; mid++) {
     const candidates = candidatesByMedia[mid]
