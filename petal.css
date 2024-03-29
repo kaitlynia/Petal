@@ -29,7 +29,7 @@
 }
 
 html {
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1.4;
 }
 
@@ -43,35 +43,23 @@ a {
   align-items: center;
   background-color: var(--dark);
   display: flex;
+  flex-flow: column;
   height: 100vh;
   justify-content: space-between;
-  padding: var(--small);
-}
-
-@media (min-width: 768px) {
-  #main {
-    padding: var(--large);
-  }
+  margin-left: auto;
+  margin-right: auto;
 }
 
 #stream-wrapper {
   align-items: center;
   display: flex;
-  height: 100%;
   justify-content: center;
-  max-width: calc(75% - var(--small));
+  max-width: 100%;
   position: relative;
   width: 100%;
 }
 
-@media (min-width: 768px) {
-  #stream-wrapper {
-    max-width: calc(75% - var(--large));
-  }
-}
-
 #stream {
-  height: 100%;
   width: 100%;
 }
 
@@ -90,7 +78,8 @@ a {
 #chat {
   height: 100%;
   margin-left: auto;
-  max-width: 25%;
+  max-width: 100%;
+  padding: var(--medium);
   position: relative;
   width: 100%;
 }
@@ -102,20 +91,14 @@ a {
 }
 
 #petal {
-  font-size: 1.5rem;
-  right: 8px;
-  bottom: var(--entry-height);
+  font-size: 3rem;
+  right: var(--medium);
+  bottom: calc(var(--entry-height) + var(--medium));
   opacity: 0.8;
   mix-blend-mode: screen;
   position: absolute;
   user-select: none;
   z-index: 1;
-}
-
-@media (min-width: 768px) {
-  #petal {
-    font-size: 3rem;
-  }
 }
 
 #messages {
@@ -143,12 +126,6 @@ a {
   overflow-wrap: anywhere;
 }
 
-@media (min-width: 768px) {
-  .msg-group {
-    padding: 0.75rem;
-  }
-}
-
 .msg-group:last-child {
   margin-bottom: 0;
 }
@@ -160,25 +137,11 @@ a {
   width: 2rem;
 }
 
-@media (min-width: 768px) {
-  .msg-group .avatar {
-    height: 3rem;
-    width: 3rem;
-  }
-}
-
 .msg-group .col {
   display: flex;
   flex-direction: column;
   padding-left: 0.5rem;
   margin-top: -4px;
-}
-
-@media (min-width: 768px) {
-  .msg-group .col {
-    margin-top: -2px;
-    padding-left: 0.75rem;
-  }
 }
 
 .msg-group .author {
@@ -192,7 +155,7 @@ a {
 }
 
 #messages > .msg {
-  padding: var(--small) 0.75rem;
+  padding: var(--small) 0.25rem;
 }
 
 #messages > .msg + .msg {
@@ -207,4 +170,53 @@ a {
 }
 .msg--priv-message-sent {
   color: var(--priv-message-sent);
+}
+
+@media (min-width: 769px) {
+  #main {
+    flex-flow: row;
+    padding: var(--medium);
+  }
+  #stream-wrapper {
+    margin-right: var(--medium);
+  }
+  #stream-wrapper + #chat {
+    max-width: 25%;
+  }
+  #chat {
+    padding: 0;
+  }
+  #petal {
+    bottom: var(--entry-height);
+    right: 0;
+  }
+  #messages > .msg {
+    padding: var(--small) 0.5rem;
+  }
+  .msg-group {
+    padding: 0.75rem;
+  }
+  .msg-group .avatar {
+    height: 3rem;
+    width: 3rem;
+  }
+  .msg-group .col {
+    margin-top: -2px;
+    padding-left: 0.75rem;
+  }
+}
+
+@media (min-width: 1200px) {
+  html {
+    font-size: 16px;
+  }
+  #main {
+    padding: var(--large);
+  }
+  #stream-wrapper {
+    margin-right: var(--large);
+  }
+  #messages > .msg {
+    padding: var(--small) 0.75rem;
+  }
 }
