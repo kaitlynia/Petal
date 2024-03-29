@@ -530,6 +530,7 @@ document.addEventListener('DOMContentLoaded', () => {
         typedPassword += event.key
         entry.value = passwordChar.repeat(typedPassword.length)
       } else if (event.key === 'Enter') {
+        entry.value = ''
         passwordMode = false
         if (typedPassword === '') return systemMessage('password entry cancelled')
         if (userData.token !== undefined) {
