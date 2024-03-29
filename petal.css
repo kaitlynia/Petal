@@ -91,11 +91,11 @@ a {
 }
 
 #petal {
+  cursor: pointer;
   font-size: 3rem;
-  right: var(--medium);
+  right: 1.75rem;
   bottom: calc(var(--entry-height) + var(--medium));
-  opacity: 0.8;
-  mix-blend-mode: screen;
+  opacity: 0.5;
   position: absolute;
   user-select: none;
   z-index: 1;
@@ -189,7 +189,7 @@ a {
   }
   #petal {
     bottom: var(--entry-height);
-    right: 0;
+    right: 0.75rem;
   }
   #messages > .msg {
     padding: var(--small) 0.5rem;
