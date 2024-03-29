@@ -140,6 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         entry.value = ''
         passwordMode = true
+        entry.focus()
         systemMessage('name exists, and you have no stored token. please enter your password (enter nothing to cancel)')
       }
     },
@@ -387,6 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
     password: args => {
       if (userData.token !== undefined) {
         passwordMode = true
+        entry.focus()
         systemMessage('enter a new password (enter nothing to cancel)')
         return 1
       } else {
