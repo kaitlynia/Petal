@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
   body = document.querySelector('body'),
   messages = document.querySelector('#messages'),
   entry = document.querySelector('#entry'),
+  passwordChar = '⬤',
   maxMessageLength = 500,
   sanitize = s => DOMPurify.sanitize(s, sanitizeConfig),
   validName = s => !/[^0-9a-z]/i.test(s),
@@ -14,6 +15,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let server = null,
   controlKeyHeld = false,
+  tempName = '',
+  passwordMode = false,
+  typedPassword = '',
   loggedIn = false,
   lastMessageGroup = null,
   sanitizeConfig = {
@@ -90,11 +94,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  const systemMessage = (message) => {
+  const systemMessage = message => {
     addMessage(message, 'system')
   }
 
-  const processMessage = (rawContents) => {
+  const processMessage = rawContents => {
     let contents = rawContents
 
     if (contents instanceof Blob) {
@@ -127,14 +131,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const payloadHandlers = {
     'auth-exists': payload => {
       if (userData.token !== undefined) {
-        systemMessage('name already exists, attempting to log in using the stored token...')
+        systemMessage('name exists, attempting to log in using the stored token...')
         send({
           type: 'auth-token',
           name: payload.name,
           token: userData.token
         })
       } else {
-        systemMessage('name already exists, and you have no stored token. try using a different name')
+        entry.value = ''
+        passwordMode = true
+        systemMessage('name exists, and you have no stored token. please enter your password (enter nothing to cancel)')
       }
     },
     'auth-name-invalid': payload => {
@@ -151,10 +157,23 @@ document.addEventListener('DOMContentLoaded', () => {
     'auth-new-ok': payload => {
       setUserData('name', userData.name)
       setUserData('token', userData.token)
-      systemMessage(`logged in as <b>${payload.name}</b>`)
+      systemMessage(`logged in as <b>${payload.name}</b>. to maintain account access, use /password`)
       loggedIn = true
       addHistory(payload.history)
       payloadHandlers['participants-ok'](payload)
+    },
+    'auth-password-ok': payload => {
+      setUserData('name', payload.name)
+      setUserData('token', payload.token)
+      setUserData('color', payload.nameColor)
+      setUserData('textColor', payload.textColor)
+      setUserData('bgColor', payload.bgColor)
+      systemMessage(`logged in as <b style="color: ${payload.nameColor};">${payload.name}</b>`)
+      if (!loggedIn) {
+        loggedIn = true
+        addHistory(payload.history)
+        payloadHandlers['participants-ok'](payload)
+      }
     },
     'auth-ok': payload => {
       setUserData('name', payload.name)
@@ -167,6 +186,9 @@ document.addEventListener('DOMContentLoaded', () => {
         addHistory(payload.history)
         payloadHandlers['participants-ok'](payload)
       }
+    },
+    'auth-fail-password': payload => {
+      systemMessage('incorrect password')
     },
     'auth-fail-max-names': payload => {
       systemMessage('you have reached the maximum number of names. (10)')
@@ -211,6 +233,12 @@ document.addEventListener('DOMContentLoaded', () => {
         )
       }
     },
+    'command-password-ok': payload => {
+      systemMessage('changed password successfully')
+    },
+    'command-password-fail': payload => {
+      systemMessage('only logged-in users can set a password. use /name to log in')
+    },
     'command-color-ok': payload => {
       setUserData('color', payload.color)
       systemMessage(`color changed to <b style="color:${userData.color}">${userData.color}</b>`)
@@ -219,7 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
       systemMessage('invalid hex color. examples: #ff9999 (pink), #007700 (dark green), #3333ff (blue)')
     },
     'command-color-auth-required': payload => {
-      systemMessage('only logged in users can use color commands. use /name to log in')
+      systemMessage('only logged-in users can use color commands. use /name to log in')
     },
     'command-textcolor-ok': payload => {
       setUserData('textColor', payload.color)
@@ -242,7 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
       systemMessage(`invalid avatar (reason: ${payload.reason}). if you are certain the image you uploaded is valid, please contact lynn with the specified error message`)
     },
     'avatar-upload-auth-required': payload => {
-      systemMessage('only logged in users can upload an avatar. use /name to log in')
+      systemMessage('only logged-in users can upload an avatar. use /name to log in')
     }
   }
 
@@ -333,6 +361,7 @@ document.addEventListener('DOMContentLoaded', () => {
     name: args => {
       if (args) {
         if (validName(args)) {
+          tempName = args
           send({
             type: 'auth-name',
             name: args
@@ -353,6 +382,16 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         systemMessage('you have the default name. use /name <name> to set one')
         return -1
+      }
+    },
+    password: args => {
+      if (userData.token !== undefined) {
+        passwordMode = true
+        systemMessage('enter a new password (enter nothing to cancel)')
+        return 1
+      } else {
+        systemMessage('only logged-in users can set a password. use /name to log in')
+        return 1
       }
     },
     names: args => {
@@ -468,7 +507,7 @@ document.addEventListener('DOMContentLoaded', () => {
     },
   }
 
-  const tryCommand = (contents) => {
+  const tryCommand = contents => {
     if (contents.charAt(0) === '/') {
       const spaceIndex = contents.search(' ')
       const cmd = spaceIndex !== -1 ? contents.slice(1, spaceIndex) : contents.slice(1)
@@ -482,8 +521,36 @@ document.addEventListener('DOMContentLoaded', () => {
     return 0
   }
 
-  const processKeyboardEvent = (event) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
+  const processKeyboardEvent = event => {
+    if (passwordMode) {
+      if (event.key === 'Backspace') {
+        typedPassword = typedPassword.slice(0, -1)
+        entry.value = entry.value.slice(0, -1)
+      } else if (event.key.length < 2)  {
+        typedPassword += event.key
+        entry.value = passwordChar.repeat(typedPassword.length)
+      } else if (event.key === 'Enter') {
+        passwordMode = false
+        if (typedPassword === '') return systemMessage('password entry cancelled')
+        if (userData.token !== undefined) {
+          send({
+            type: 'command-password',
+            password: typedPassword,
+          })
+        } else {
+          send({
+            type: 'auth-password',
+            name: tempName,
+            password: typedPassword,
+          })
+          tempName = ''
+        }
+        typedPassword = ''
+      }
+      event.preventDefault()
+      event.stopPropagation()
+
+    } else if (event.key === 'Enter' && !event.shiftKey) {
       // prevent newline character
       event.preventDefault()
 
@@ -523,7 +590,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  body.addEventListener('keydown', (event) => {
+  body.addEventListener('keydown', event => {
     if (event.key === 'Control') {
       controlKeyHeld = true
     } else if (!controlKeyHeld) {
@@ -532,14 +599,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   })
 
-  body.addEventListener('keyup', (event) => {
+  body.addEventListener('keyup', event => {
     if (event.key === 'Control') {
       controlKeyHeld = false
     }
   })
 
-  entry.addEventListener('keydown', (event) => {
+  entry.addEventListener('keydown', event => {
     processKeyboardEvent(event)
+  })
+
+  entry.addEventListener('mousedown', event => {
+    if (passwordMode) {
+      event.preventDefault()
+    }
   })
 
   avatarImage.addEventListener('load', event => {
@@ -560,8 +633,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (userData.server !== undefined) {
     server = connect(userData.server)
-  } else {
-    systemMessage(`welcome to Petal! use /connect <url> to connect to a server. (try ${rootURL})`)
   }
 })
 
@@ -594,8 +665,10 @@ const getOfflineTime = delay => {
 }
 
 const showStreamInfo = str => {
-	streamInfo.innerText = str
-  streamInfo.style = 'display: block;'
+  if (streamInfo !== null) {
+    streamInfo.innerText = str
+    streamInfo.style = 'display: block;'
+  }
 }
 
 const unquoteCredential = v => (
@@ -833,8 +906,10 @@ const onConnectionState = () => {
 }
 
 const onTrack = (evt) => {
-	streamInfo.style = ''
-	stream.srcObject = evt.streams[0]
+	if (streamInfo !== null) {
+    streamInfo.style = ''
+	  stream.srcObject = evt.streams[0]
+  }
 }
 
 const requestICEServers = () => {

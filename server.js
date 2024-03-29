@@ -13,7 +13,12 @@ let data = {
   cert: 'fullchain.pem',
   key: 'privkey.pem',
   port: 8080,
+  passwordSalt: 'salt',
+  hashIterations: 10000,
+  hashBytes: 64,
+  hashDigest: 'sha512',
   tokenNames: {},
+  tokenHash: {},
   nameToken: {},
   nameColor: {},
   nameTextColor: {},
@@ -54,7 +59,8 @@ validHexColor = s => /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(s),
 defaultNameColor = '#aaaaaa',
 defaultTextColor = '#ffffff',
 defaultBgColor = '#202020',
-maxMessageHistory = 50
+maxMessageHistory = 50,
+socks = new Set()
 
 const sockSend = (sock, payload) => sock.send(JSON.stringify(payload))
 
@@ -82,8 +88,8 @@ const authToken = (sock, token, name, newName=false) => {
       nameColor: sock.nameColor,
       textColor: sock.textColor,
       bgColor: sock.bgColor,
-      history: data.messageHistory.slice(data.messageHistoryIndex).concat(...data.messageHistory.slice(0, data.messageHistoryIndex)),
-      participants: [...socks].map(s => s.name)
+      history: getHistory(),
+      participants: getParticipants()
     }))
     updateParticipants(sock, action)
   } else {
@@ -91,6 +97,20 @@ const authToken = (sock, token, name, newName=false) => {
       type: 'auth-fail-unauthorized'
     }))
   }
+}
+
+const hashPassword = (password, callback) => {
+  crypto.pbkdf2(password, data.passwordSalt, data.hashIterations, data.hashBytes, data.hashDigest,
+    (err, derivedKey) => {
+      if (err) throw err
+      callback(derivedKey.toString('hex'))
+    }
+  )
+}
+
+const getParticipants = () => [...socks].map(s => s.name)
+const getHistory = () => {
+  return data.messageHistory.slice(data.messageHistoryIndex).concat(...data.messageHistory.slice(0, data.messageHistoryIndex))
 }
 
 const payloadHandlers = {
@@ -124,6 +144,36 @@ const payloadHandlers = {
   'auth-token': (sock, payload) => {
     authToken(sock, payload.token, payload.name)
   },
+  'auth-password': (sock, payload) => {
+    if (payload.hasOwnProperty('name') && payload.hasOwnProperty('password')) {
+      hashPassword(payload.password, hash => {
+        const token = data.nameToken[payload.name]
+        if (data.tokenHash[token] === hash) {
+          sock.token = token
+          sock.name = payload.name
+          sock.nameColor = data.nameColor[sock.name] || defaultNameColor
+          sock.textColor = data.nameTextColor[sock.name] || defaultTextColor
+          sock.bgColor = data.nameBgColor[sock.name] || defaultBgColor
+          sockSend(sock, {
+            type: 'auth-password-ok',
+            token: sock.token,
+            name: sock.name,
+            nameColor: sock.nameColor,
+            textColor: sock.textColor,
+            bgColor: sock.bgColor,
+            history: getHistory(),
+            participants: getParticipants()
+          })
+          updateParticipants(sock, 'joined')
+        } else {
+          sockSend(sock, {
+            type: 'auth-fail-password',
+            name: payload.name
+          })
+        }
+      })
+    }
+  },
   'auth-recv': (sock, payload) => {
     if (sock.auth_pair !== undefined) {
       sock.name = sock.auth_pair.name
@@ -135,8 +185,8 @@ const payloadHandlers = {
       sockSend(sock, {
         type: 'auth-new-ok',
         name: sock.name,
-        history: data.messageHistory.slice(data.messageHistoryIndex).concat(...data.messageHistory.slice(0, data.messageHistoryIndex)),
-        participants: [...socks].map(s => s.name)
+        history: getHistory(),
+        participants: getParticipants()
       })
       updateParticipants(sock, 'joined as a new user (say hi!)')
     } else {
@@ -208,6 +258,20 @@ const payloadHandlers = {
       const messageStr = JSON.stringify(message)
 
       socks.forEach(s => s.send(messageStr))
+    }
+  },
+  'command-password': (sock, payload) => {
+    if (sock.token !== undefined && payload.hasOwnProperty('name')) {
+      hashPassword(payload.password, hash => {
+        data.tokenHash[sock.token] = hash
+        sockSend(sock, {
+          type: 'command-password-ok'
+        })
+      })
+    } else {
+      sockSend(sock, {
+        type: 'command-password-fail'
+      })
     }
   },
   'command-names': (sock, payload) => {
@@ -319,8 +383,6 @@ const payloadHandlers = {
     }
   },
 }
-
-const socks = new Set()
 
 const updateParticipants = (sock, action) => {
   const participantsStr = JSON.stringify({
