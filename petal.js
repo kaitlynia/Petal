@@ -299,7 +299,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (userData.server !== undefined) {
           dest = userData.server
         } else {
-          return systemMessage(`missing server url. example: /connect ${rootURL}`)
+          systemMessage(`missing server url. example: /connect ${rootURL}`)
+          return -1
         }
       }
 
@@ -317,14 +318,17 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         server = connect(dest)
       }
+      return 1
     },
     help: () => {
       systemMessage(`commands: ${Object.keys(commands).join(', ')}`)
+      return 1
     },
     users: () => {
       send({
         type: 'participants'
       })
+      return 1
     },
     name: args => {
       if (args) {
@@ -333,17 +337,22 @@ document.addEventListener('DOMContentLoaded', () => {
             type: 'auth-name',
             name: args
           })
+          return 1
         } else {
           payloadHandlers['auth-name-invalid']()
+          return -1
         }
       } else if (userData.name !== undefined) {
         if (userData.color !== undefined) {
           systemMessage(`your name is <b style="color:${userData.color}">${userData.name}</b>`)
+          return 1
         } else {
           systemMessage(`your name is <b>${userData.name}</b>`)
+          return 1
         }
       } else {
         systemMessage('you have the default name. use /name <name> to set one')
+        return -1
       }
     },
     names: args => {
@@ -351,8 +360,10 @@ document.addEventListener('DOMContentLoaded', () => {
         send({
           type: 'command-names',
         })
+        return 1
       } else {
         payloadHandlers['command-names-fail']()
+        return 1
       }
     },
     color: args => {
@@ -362,13 +373,17 @@ document.addEventListener('DOMContentLoaded', () => {
             type: 'command-color',
             color: args
           })
+          return 1
         } else {
           payloadHandlers['command-color-invalid']()
+          return -1
         }
       } else if (userData.color !== undefined) {
         systemMessage(`your name color is <b style="color: ${userData.color};">${userData.color}</b>`)
+        return 1
       } else {
         systemMessage('you have the default name color. use /color <color> (ex. /color #ffaaaa)')
+        return -1
       }
     },
     textcolor: args => {
@@ -378,13 +393,17 @@ document.addEventListener('DOMContentLoaded', () => {
             type: 'command-textcolor',
             color: args
           })
+          return 1
         } else {
           payloadHandlers['command-color-invalid']()
+          return -1
         }
       } else if (userData.textColor !== undefined) {
         systemMessage(`your text color is <b style="color: ${userData.textColor};">${userData.textColor}</b>`)
+        return 1
       } else {
         systemMessage('you have the default text color. use /textcolor <color> (ex. /textcolor #ffaaaa)')
+        return -1
       }
     },
     bgcolor: args => {
@@ -394,17 +413,22 @@ document.addEventListener('DOMContentLoaded', () => {
             type: 'command-bgcolor',
             color: args
           })
+          return 1
         } else {
           payloadHandlers['command-color-invalid']()
+          return -1
         }
       } else if (userData.bgColor !== undefined) {
         systemMessage(`your background color is <b style="color: ${userData.bgColor};">${userData.bgColor}</b>`)
+        return 1
       } else {
         systemMessage('you have the default background color. use /bgcolor <color> (ex. /bgcolor #ffaaaa)')
+        return -1
       }
     },
     avatar: args => {
       avatarInput.click()
+      return 1
     },
     w: args => {
       if (args) {
@@ -416,24 +440,30 @@ document.addEventListener('DOMContentLoaded', () => {
             name: args.slice(0, spaceIndex),
             body: sanitize(body),
           })
+          return 1
         } else {
           systemMessage('missing message content. example: /w exampleUser23 hi!')
+          return -1
         }
       } else {
         systemMessage('missing name and message. example: /w exampleUser23 hi!')
+        return -1
       }
     },
     c: args => {
       if (userData.lastUserPrivateMessaged === undefined) {
         systemMessage('no previous recipient. example: /w exampleUser23 hi, /c hello again!')
+        return -1
       } else if (args && args.length > 1) {
         send({
           type: 'priv-message',
           name: userData.lastUserPrivateMessaged,
           body: sanitize(args),
         })
+        return 1
       } else {
         systemMessage('missing message. example: /w exampleUser23 hi, /c hello again!')
+        return -1
       }
     },
   }
@@ -443,13 +473,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const spaceIndex = contents.search(' ')
       const cmd = spaceIndex !== -1 ? contents.slice(1, spaceIndex) : contents.slice(1)
       if (commands.hasOwnProperty(cmd)) {
-        commands[cmd](spaceIndex !== -1 ? contents.slice(spaceIndex + 1) : null)
+        return commands[cmd](spaceIndex !== -1 ? contents.slice(spaceIndex + 1) : null)
       } else {
         systemMessage(`unknown command: ${cmd}`)
+        return -1
       }
-      return true
     }
-    return false
+    return 0
   }
 
   const processKeyboardEvent = (event) => {
@@ -461,24 +491,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (processedMessage !== '') {
         // send command/message
-        const wasCommand = tryCommand(processedMessage)
+        const commandResult = tryCommand(processedMessage)
 
-        if (!wasCommand) {
-          if (processedMessage.length <= maxMessageLength) {
-            try {
-              send({
-                type: 'message',
-                body: processedMessage
-              })
-              // clear text entry contents on successful message send
-              entry.value = ''
-            } catch (e) {
-              console.log(e)
-              systemMessage('failed to send message. use /connect to reconnect or /connect <url>')
+        switch (commandResult) {
+          case -1:
+            break
+          case 0:
+            if (processedMessage.length <= maxMessageLength) {
+              try {
+                send({
+                  type: 'message',
+                  body: processedMessage
+                })
+                entry.value = ''
+              } catch (e) {
+                console.log(e)
+                systemMessage('failed to send message. use /connect to reconnect or /connect <url>')
+              }
+            } else {
+              systemMessage(`failed to send message. ${processedMessage.length} characters long, max message length is ${maxMessageLength}`)
             }
-          } else {
-            systemMessage(`failed to send message. ${processedMessage.length} characters long, max message length is ${maxMessageLength}`)
-          }
+            break
+          case 1:
+            entry.value = ''
+            break
         }
       }
 
