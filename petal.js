@@ -464,7 +464,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const wasCommand = tryCommand(processedMessage)
 
         if (!wasCommand) {
-          if (processedMessage <= maxMessageLength) {
+          if (processedMessage.length <= maxMessageLength) {
             try {
               send({
                 type: 'message',
