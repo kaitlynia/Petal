@@ -535,6 +535,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (userData.token !== undefined) {
           send({
             type: 'command-password',
+            token: userData.token,
             password: typedPassword,
           })
         } else {

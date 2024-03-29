@@ -261,9 +261,9 @@ const payloadHandlers = {
     }
   },
   'command-password': (sock, payload) => {
-    if (sock.token !== undefined && payload.hasOwnProperty('name')) {
+    if (payload.hasOwnProperty('token') && payload.hasOwnProperty('password')) {
       hashPassword(payload.password, hash => {
-        data.tokenHash[sock.token] = hash
+        data.tokenHash[payload.token] = hash
         sockSend(sock, {
           type: 'command-password-ok'
         })
