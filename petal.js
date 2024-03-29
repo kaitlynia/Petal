@@ -612,6 +612,7 @@ document.addEventListener('DOMContentLoaded', () => {
   })
 
   entry.addEventListener('mousedown', event => {
+    entry.focus()
     if (passwordMode) {
       event.preventDefault()
     }
