@@ -76,7 +76,7 @@ a {
 }
 
 #chat {
-  height: 100%;
+  height: 54vw;
   margin-left: auto;
   max-width: 100%;
   padding: var(--medium);
@@ -184,6 +184,7 @@ a {
     max-width: 25%;
   }
   #chat {
+    height: 100%;
     padding: 0;
   }
   #petal {
