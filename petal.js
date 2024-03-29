@@ -470,6 +470,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 type: 'message',
                 body: processedMessage
               })
+              // clear text entry contents on successful message send
+              entry.value = ''
             } catch (e) {
               console.log(e)
               systemMessage('failed to send message. use /connect to reconnect or /connect <url>')
@@ -479,9 +481,6 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
       }
-
-      // clear text entry contents
-      entry.value = ''
 
       // don't trigger this event twice
       event.stopPropagation()
