@@ -203,9 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     'message': payload => {
       const cleanBody = sanitize(payload.body)
-      if (cleanBody.length > maxMessageLength) {
-        systemMessage(`failed to send message. ${cleanBody.length} characters long, max message length is ${maxMessageLength}`)
-      } else if (cleanBody !== '') {
+      if (cleanBody !== '') {
         if (lastMessageGroup === null || lastMessageGroup !== payload.name) {
           addMessageGroup(payload, cleanBody)
         } else (
@@ -466,14 +464,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const wasCommand = tryCommand(processedMessage)
 
         if (!wasCommand) {
-          try {
-            send({
-              type: 'message',
-              body: processedMessage
-            })
-          } catch (e) {
-            console.log(e)
-            systemMessage('failed to send message. use /connect to reconnect or /connect <url>')
+          if (processedMessage <= maxMessageLength) {
+            try {
+              send({
+                type: 'message',
+                body: processedMessage
+              })
+            } catch (e) {
+              console.log(e)
+              systemMessage('failed to send message. use /connect to reconnect or /connect <url>')
+            }
+          } else {
+            systemMessage(`failed to send message. ${processedMessage.length} characters long, max message length is ${maxMessageLength}`)
           }
         }
       }
