@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
   body = document.querySelector('body'),
   messages = document.querySelector('#messages'),
   entry = document.querySelector('#entry'),
+  maxMessageLength = 500,
   sanitize = s => DOMPurify.sanitize(s, sanitizeConfig),
   validName = s => !/[^0-9a-z]/i.test(s),
   validColor = s => {
@@ -65,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const scrollHeight = messages.scrollHeight
     lastMessageGroup = payload.name
 
-    messages.innerHTML += `<div class="msg-group" style="background: ${payload.bgColor};"><img class="avatar" src="https://${rootURL + "/avatars/" + (payload.hasAvatar ? payload.name : 'anon')}.png"><div class="col"><div class="author" style="color: ${payload.nameColor};">${payload.name}</div><div class="msg" style="color: ${payload.textColor};">${messageText}</div></div>`
+    messages.innerHTML += `<div class="msg-group" style="background: ${payload.bgColor};"><img class="avatar" src="/avatars/${payload.hasAvatar ? payload.name : 'anon'}.png"><div class="col"><div class="author" style="color: ${payload.nameColor};">${payload.name}</div><div class="msg" style="color: ${payload.textColor};">${messageText}</div></div>`
 
     tryScrollFrom(scrollHeight)
   }
@@ -202,7 +203,9 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     'message': payload => {
       const cleanBody = sanitize(payload.body)
-      if (cleanBody !== '') {
+      if (cleanBody.length > maxMessageLength) {
+        systemMessage(`failed to send message. ${cleanBody.length} characters long, max message length is ${maxMessageLength}`)
+      } else if (cleanBody !== '') {
         if (lastMessageGroup === null || lastMessageGroup !== payload.name) {
           addMessageGroup(payload, cleanBody)
         } else (

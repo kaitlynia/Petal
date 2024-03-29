@@ -5,7 +5,9 @@ WSServer = require('ws').Server,
 createDOMPurify = require('dompurify'),
 JSDOM = require('jsdom').JSDOM
 
-const dataPath = './data.json'
+const dataPath = './data.json',
+maxMessageLength = 500
+
 let data = {
   admins: [],
   cert: 'fullchain.pem',
@@ -181,6 +183,9 @@ const payloadHandlers = {
   'message': (sock, payload) => {
     if (payload.hasOwnProperty('body')) {
       const cleanBody = sanitize(payload.body)
+
+      if (cleanBody.length > maxMessageLength) return
+
       const message = {
         type: 'message',
         hasAvatar: data.nameAvatar[sock.name] !== undefined,
