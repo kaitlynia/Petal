@@ -76,12 +76,16 @@ a {
 }
 
 #chat {
-  height: calc(100vh - 56.25vw);
+  height: 100%;
   margin-left: auto;
   max-width: 100%;
   padding: var(--medium);
   position: relative;
   width: 100%;
+}
+
+#stream-wrapper + #chat {
+  height: calc(100vh - 56.25vw);
 }
 
 #chat, #entry, #messages {
