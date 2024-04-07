@@ -285,7 +285,7 @@ const payloadHandlers = {
       const user = [...socks].find(s => s.name === payload.name)
       if (user !== undefined) {
         const body = sanitize(payload.body)
-        if (isSubscribed(token)) {
+        if (isSubscribed(sock.token)) {
           sock.textColor = data.nameTextColor[sock.name] || defaultTextColor
           sock.bgColor = data.nameBgColor[sock.name] || defaultBgColor
         } else {
@@ -322,7 +322,7 @@ const payloadHandlers = {
 
       if (cleanBody.length > maxMessageLength) return
 
-      if (isSubscribed(token)) {
+      if (isSubscribed(sock.token)) {
         sock.textColor = data.nameTextColor[sock.name] || defaultTextColor
         sock.bgColor = data.nameBgColor[sock.name] || defaultBgColor
       } else {
