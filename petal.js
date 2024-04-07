@@ -4,6 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
   messages = document.querySelector('#messages'),
   entry = document.querySelector('#entry'),
   passwordChar = '⬤',
+  currencyEmoji = '&#x1F33A;',
+  premiumCurrencyEmoji = '&#x1F338;',
   maxMessageLength = 500,
   sanitize = s => DOMPurify.sanitize(s, sanitizeConfig),
   validName = s => !/[^0-9a-z]/i.test(s),

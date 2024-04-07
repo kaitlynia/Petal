@@ -10,6 +10,7 @@ dataPath = './data.json',
 lynnyaYearEpoch = 2024,
 UTCDay = 86400000,
 getSubTime = () => new Date().setUTCMonth(new Date().getUTCMonth() + 1),
+
 sanitizeConfig = {
   ALLOWED_TAGS: ['a', 'b', 'i', 's', 'u', 'br'],
   ALLOWED_ATTR: ['href', 'target', 'rel']
@@ -23,7 +24,15 @@ defaultTextColor = '#ffffff',
 defaultBgColor = '#202020',
 maxMessageLength = 500,
 maxMessageHistory = 50,
-socks = new Set()
+socks = new Set(),
+
+dailyCurrencyMin = 50,
+dailyCurrencyMax = 100,
+dailyCurrencySubMin = 50,
+dailyCurrencySubMax = 250,
+dailyPremiumChance = 0.05,
+dailyPremiumSubChance = 0.1,
+dollarPerPremiumCurrency = 1
 
 let data = {
   broadcaster: '',
@@ -46,6 +55,8 @@ let data = {
   tokenKofi: {},
   tokenNames: {},
   tokenHash: {},
+  tokenStats: {},
+  tokenInventory: {},
   nameToken: {},
   nameColor: {},
   nameTextColor: {},
@@ -53,21 +64,6 @@ let data = {
   nameAvatar: {},
   messageHistory: [],
   messageHistoryIndex: 0
-}
-
-const updateDailyRevenue = (isSub, amount) => {
-  const now = new Date()
-  const day = (now.getYear() - lynnyaYearEpoch + 1) * now.getDay()
-  if (isSub) {
-    data.dailySubs[day] = (data.dailySubs[day] || 0) + 1
-  } else {
-    data.dailyDonations[day] = (data.dailyDonations[day] || 0) + donation
-  }
-  data.dailyRevenue[day] = (data.dailyRevenue[day] || 0) + amount
-}
-
-const isSubscribed = token => {
-  return token === data.broadcaster || Date.now() < data.kofiSubTime[data.tokenKofi[token]]
 }
 
 const saveData = () => {
@@ -78,22 +74,53 @@ if (fs.existsSync(dataPath)) {
   data = JSON.parse(fs.readFileSync(dataPath, 'utf8'))
 }
 
+const updateDailyRevenue = (isSub, amount) => {
+  const now = new Date()
+  const day = (now.getUTCFullYear() - lynnyaYearEpoch + 1) * now.getDay()
+  if (isSub) {
+    data.dailySubs[day] = (data.dailySubs[day] || 0) + 1
+  } else {
+    data.dailyDonations[day] = (data.dailyDonations[day] || 0) + donation
+  }
+  data.dailyRevenue[day] = (data.dailyRevenue[day] || 0) + amount
+}
+
+const awardPremiumCurrency = (token, totalDonations) => {
+  const claimed = (data.tokenStats[token] || {}).premiumCurrencyClaimed
+  const award = ~~((totalDonations - claimed) / dollarPerPremiumCurrency)
+  const currency = (data.tokenStats[token] || {}).premiumCurrency
+  Object.assign(data.tokenStats[token], {
+    premiumCurrencyClaimed: claimed + award,
+    premiumCurrency: currency + award,
+  })
+  return award
+}
+
+const isSubscribed = token => {
+  return token === data.broadcaster || Date.now() < data.kofiSubTime[data.tokenKofi[token]]
+}
+
 const kofiHandler = payload => {
   if (payload['verification_token'] === data.kofiVerificationToken) {
-    const email = payload['email']
+    const kofi = payload['email']
     const isSub = payload['type'] === 'Subscription'
     const amount = Number(payload['amount'])
 
     if (isSub) {
-      data.kofiSubTime[email] = getSubTime()
-      data.kofiSubs[email] = (data.kofiSubs[email] || 0) + 1
+      data.kofiSubTime[kofi] = getSubTime()
+      data.kofiSubs[kofi] = (data.kofiSubs[kofi] || 0) + 1
       if (payload['is_first_subscription_payment']) {
-        data.kofiSubStreak[email] = 1
+        data.kofiSubStreak[kofi] = 1
       } else {
-        data.kofiSubStreak[email] = (data.kofiSubStreak[email] || 0) + 1
+        data.kofiSubStreak[kofi] = (data.kofiSubStreak[kofi] || 0) + 1
       }
-    } else if (payload['type'] === 'Donation') {
-      data.kofiDonations[email] = (data.kofiDonations[email] || 0) + amount
+    } else {
+      data.kofiDonations[kofi] = (data.kofiDonations[kofi] || 0) + amount
+      const token = data.kofiToken[kofi]
+      if (token !== undefined) {
+        awardPremiumCurrency(token, data.kofiDonations[kofi])
+
+      }
     }
 
     updateDailyRevenue(isSub, amount)
@@ -274,6 +301,29 @@ const payloadHandlers = {
       })
     }
   },
+  'avatar-upload': (sock, payload) => {
+    if (sock.token !== undefined) {
+      fs.writeFile(`/var/www/html/avatars/${sock.name}.png`, payload.data.replace('data:image/png;base64,', ''), 'base64', err => {
+        if (err) {
+          sockSend(sock, {
+            type: 'avatar-upload-fail',
+            reason: err.toString()
+          })
+        } else {
+          data.nameAvatar[sock.name] = true
+          saveData()
+
+          sockSend(sock, {
+            type: 'avatar-upload-ok'
+          })
+        }
+      })
+    } else {
+      sockSend(sock, {
+        type: 'avatar-upload-auth-required'
+      })
+    }
+  },
   'participants': (sock, payload) => {
     sockSend(sock, {
       type: 'participants-ok',
@@ -416,6 +466,7 @@ const payloadHandlers = {
 
       data.kofiDonations[newKofi] = (data.kofiDonations[currentKofi] || 0) + (data.kofiDonations[newKofi] || 0)
       delete data.kofiDonations[currentKofi]
+      awardPremiumCurrency(sock.token, data.kofiDonations[newKofi])
 
       saveData()
 
@@ -525,29 +576,23 @@ const payloadHandlers = {
       }
     }
   },
-  'avatar-upload': (sock, payload) => {
-    if (sock.token !== undefined) {
-      fs.writeFile(`/var/www/html/avatars/${sock.name}.png`, payload.data.replace('data:image/png;base64,', ''), 'base64', err => {
-        if (err) {
-          sockSend(sock, {
-            type: 'avatar-upload-fail',
-            reason: err.toString()
-          })
-        } else {
-          data.nameAvatar[sock.name] = true
-          saveData()
+  // 'command-daily': (sock, payload) => {
+  //   if (sock.token !== undefined) {
+  //     const stats = data.tokenStats[sock.token]
+  //     const dailyTime = stats.dailyTime || 0
+  //     if ((data.tokenStats[sock.token] || {dailyTime: 0}).dailyTime)
+  //     sub = isSubscribed(sock.token)
+  //     const min = sub ? dailyCurrencySubMin : dailyCurrencyMin
+  //     const max = sub ? dailyCurrencySubMax : dailyCurrencyMax
+  //     base = Math.random() * (max - min) + min
 
-          sockSend(sock, {
-            type: 'avatar-upload-ok'
-          })
-        }
-      })
-    } else {
-      sockSend(sock, {
-        type: 'avatar-upload-auth-required'
-      })
-    }
-  },
+
+  //   } else {
+  //     sockSend(sock, {
+  //       type: 'command-daily-auth-required'
+  //     })
+  //   }
+  // },
 }
 
 wss.on('connection', sock => {
