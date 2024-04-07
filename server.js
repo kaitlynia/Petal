@@ -55,10 +55,10 @@ let data = {
   messageHistoryIndex: 0
 }
 
-const updateDailyRevenue = (sub = true, amount = 5) => {
+const updateDailyRevenue = (isSub, amount) => {
   const now = new Date()
   const day = (now.getYear() - lynnyaYearEpoch + 1) * now.getDay()
-  if (sub) {
+  if (isSub) {
     data.dailySubs[day] = (data.dailySubs[day] || 0) + 1
   } else {
     data.dailyDonations[day] = (data.dailyDonations[day] || 0) + donation
@@ -96,7 +96,7 @@ const kofiHandler = payload => {
       data.kofiDonations[email] = (data.kofiDonations[email] || 0) + amount
     }
 
-    updateDailyRevenue(sub = isSub, amount = amount)
+    updateDailyRevenue(isSub, amount)
     saveData()
   }
 }
