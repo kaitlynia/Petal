@@ -76,7 +76,7 @@ a {
 }
 
 #chat {
-  height: 100%;
+  height: calc(100vh - 56.25vw);
   margin-left: auto;
   max-width: 100%;
   padding: var(--medium);
@@ -85,7 +85,7 @@ a {
 }
 
 #stream-wrapper + #chat {
-  height: calc(100vh - 56.25vw);
+  height: 100%;
 }
 
 #chat, #entry, #messages {
