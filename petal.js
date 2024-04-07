@@ -11,7 +11,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const style = new Option().style
     style.color = s
     return !['unset', 'initial', 'inherit', ''].includes(style.color)
-  }
+  },
+  validEmail = s => /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/.test(s)
 
   let server = null,
   controlKeyHeld = false,
@@ -60,7 +61,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const scrollHeight = messages.scrollHeight
     lastMessageGroup = null
 
-    // NOTE: support optional text/bg colors?
     messages.innerHTML += `<div class="msg${modifier !== undefined ? ' msg--' + modifier : ''}">${text}</div>`
 
     tryScrollFrom(scrollHeight)
@@ -98,25 +98,13 @@ document.addEventListener('DOMContentLoaded', () => {
     addMessage(message, 'system')
   }
 
-  const processMessage = rawContents => {
-    let contents = rawContents
-
-    if (contents instanceof Blob) {
-      const reader = new FileReader()
-
-      reader.onload = () => {
-        contents = reader.result
-      }
-
-      reader.readAsText(contents)
-    }
-
-    return sanitize(contents)
+  const processEntry = content => {
+    return sanitize(content)
       .trim()
       .replaceAll(/\*\*([^]+)\*\*/gm, '<b>$1</b>')
       .replaceAll(/\*([^]+)\*/gm, '<i>$1</i>')
-      .replaceAll(/\_\_([^]+)\_\_/gm, '<u>$1</u>')
       .replaceAll(/\~\~([^]+)\~\~/gm, '<s>$1</s>')
+      .replaceAll(/\_\_([^]+)\_\_/gm, '<u>$1</u>')
       .replaceAll('\n', '<br>')
       .replaceAll(/https?:\/\/[^\s]{2,}/g, '<a href="$&" target="_blank" rel="noopener">$&</a>')
   }
@@ -204,12 +192,12 @@ document.addEventListener('DOMContentLoaded', () => {
       systemMessage(`users here now (${payload.participants.length}): ${payload.participants.join(', ')}`)
     },
     'participants-update': payload => {
-      systemMessage(`${payload.name} ${payload.action}`)
+      // TODO: implement UI for participants
+      // systemMessage(`${payload.name} ${payload.action}`)
     },
     'priv-message': payload => {
       const cleanBody = sanitize(payload.body)
       if (cleanBody !== '') {
-        // NOTE: use textColor/bgColor here?
         addMessage(`← <b style="color: ${payload.nameColor}";>${payload.name}</b>: ${cleanBody}`, payload.type)
       }
     },
@@ -217,8 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const cleanBody = sanitize(payload.body)
       if (cleanBody !== '') {
         setUserData('lastUserPrivateMessaged', payload.name)
-        // NOTE: use textColor/bgColor here?
-        addMessage(`→ <b>${payload.name}</b>: ${cleanBody}`, payload.type)
+        systemMessage(`→ <b>${payload.name}</b>: ${cleanBody}`, payload.type)
       }
     },
     'priv-message-fail': payload => {
@@ -234,11 +221,20 @@ document.addEventListener('DOMContentLoaded', () => {
         )
       }
     },
+    'command-kofi-auth-fail': payload => {
+      systemMessage('this Ko-fi email has already been claimed. if you believe this is an error, please contact lynn')
+    },
+    'command-kofi-auth-required': payload => {
+      systemMessage('only named users can set a Ko-fi email. use /name to name yourself')
+    },
+    'command-kofi-ok': payload => {
+      systemMessage('changed Ko-fi email successfully')
+    },
     'command-password-ok': payload => {
       systemMessage('changed password successfully')
     },
-    'command-password-fail': payload => {
-      systemMessage('only logged-in users can set a password. use /name to log in')
+    'command-password-auth-required': payload => {
+      systemMessage('only named users can set a password. use /name to log in')
     },
     'command-color-ok': payload => {
       setUserData('color', payload.color)
@@ -248,7 +244,10 @@ document.addEventListener('DOMContentLoaded', () => {
       systemMessage('invalid hex color. examples: #ff9999 (pink), #007700 (dark green), #3333ff (blue)')
     },
     'command-color-auth-required': payload => {
-      systemMessage('only logged-in users can use color commands. use /name to log in')
+      systemMessage('only named users can change their name color, and only Ko-fi subscribers can change text/background colors. use /name to name yourself')
+    },
+    'command-color-sub-required': payload => {
+      systemMessage('only users with a linked Ko-fi subscription can change text/background colors. use /kofi to link your email if you are already subbed')
     },
     'command-textcolor-ok': payload => {
       setUserData('textColor', payload.color)
@@ -268,10 +267,10 @@ document.addEventListener('DOMContentLoaded', () => {
       systemMessage('avatar updated')
     },
     'avatar-upload-fail': payload => {
-      systemMessage(`invalid avatar (reason: ${payload.reason}). if you are certain the image you uploaded is valid, please contact lynn with the specified error message`)
+      systemMessage(`invalid avatar (reason: ${payload.reason}). if you are certain the image you uploaded is valid, please contact lynn`)
     },
     'avatar-upload-auth-required': payload => {
-      systemMessage('only logged-in users can upload an avatar. use /name to log in')
+      systemMessage('only named users can upload an avatar. use /name to name yourself')
     }
   }
 
@@ -385,6 +384,20 @@ document.addEventListener('DOMContentLoaded', () => {
         return -1
       }
     },
+    kofi: args => {
+      if (userData.token !== undefined) {
+        if (args && validEmail(args)) {
+          send({
+            type: 'command-kofi',
+            kofi: args
+          })
+        } else {
+          systemMessage('invalid email address.')
+        }
+      } else {
+        payloadHandlers['command-kofi-auth-required']()
+      }
+    },
     password: args => {
       if (userData.token !== undefined) {
         passwordMode = true
@@ -392,7 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
         systemMessage('enter a new password (enter nothing to cancel)')
         return 1
       } else {
-        systemMessage('only logged-in users can set a password. use /name to log in')
+        systemMessage('only named users can set a password. use /name to name yourself')
         return 1
       }
     },
@@ -426,6 +439,9 @@ document.addEventListener('DOMContentLoaded', () => {
         systemMessage('you have the default name color. use /color <color> (ex. /color #ffaaaa)')
         return -1
       }
+    },
+    nameColor: args => {
+      commands[color](args)
     },
     textcolor: args => {
       if (args) {
@@ -509,12 +525,12 @@ document.addEventListener('DOMContentLoaded', () => {
     },
   }
 
-  const tryCommand = contents => {
-    if (contents.charAt(0) === '/') {
-      const spaceIndex = contents.search(' ')
-      const cmd = spaceIndex !== -1 ? contents.slice(1, spaceIndex) : contents.slice(1)
+  const tryCommand = content => {
+    if (content.charAt(0) === '/') {
+      const spaceIndex = content.search(' ')
+      const cmd = spaceIndex !== -1 ? content.slice(1, spaceIndex) : content.slice(1)
       if (commands.hasOwnProperty(cmd)) {
-        return commands[cmd](spaceIndex !== -1 ? contents.slice(spaceIndex + 1) : null)
+        return commands[cmd](spaceIndex !== -1 ? content.slice(spaceIndex + 1) : null)
       } else {
         systemMessage(`unknown command: ${cmd}`)
         return -1
@@ -538,7 +554,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (userData.token !== undefined) {
           send({
             type: 'command-password',
-            token: userData.token,
             password: typedPassword,
           })
         } else {
@@ -558,21 +573,21 @@ document.addEventListener('DOMContentLoaded', () => {
       // prevent newline character
       event.preventDefault()
 
-      const processedMessage = processMessage(entry.value)
+      const processedEntry = processEntry(entry.value)
 
-      if (processedMessage !== '') {
+      if (processedEntry !== '') {
         // send command/message
-        const commandResult = tryCommand(processedMessage)
+        const commandResult = tryCommand(processedEntry)
 
         switch (commandResult) {
           case -1:
             break
           case 0:
-            if (processedMessage.length <= maxMessageLength) {
+            if (processedEntry.length <= maxMessageLength) {
               try {
                 send({
                   type: 'message',
-                  body: processedMessage
+                  body: processedEntry
                 })
                 entry.value = ''
               } catch (e) {
@@ -580,7 +595,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 systemMessage('failed to send message. use /connect to reconnect or /connect <url>')
               }
             } else {
-              systemMessage(`failed to send message. ${processedMessage.length} characters long, max message length is ${maxMessageLength}`)
+              systemMessage(`failed to send message. ${processedEntry.length} characters long, max message length is ${maxMessageLength}`)
             }
             break
           case 1:
@@ -644,314 +659,316 @@ document.addEventListener('DOMContentLoaded', () => {
 /* From https://github.com/bluenviron/mediamtx/blob/main/internal/servers/webrtc/read_index.html */
 /* MediaMTX is MIT-licensed */
 
-const retryMinute = 60000
-const initialRetryDelay = 2000
-const retryDelayScalar = 1.5
-let retryDelay = initialRetryDelay
-
-const stream = document.getElementById('stream')
 const streamInfo = document.getElementById('stream-info')
 
-let pc = null
-let offlineSince = null
-let restartTimeout = null
-let sessionUrl = ''
-let offerData = ''
-let queuedCandidates = []
+if (streamInfo !== null) {
+  const stream = document.getElementById('stream')
 
-const getOfflineTime = delay => {
-  const days = delay / 864000000
-  if (days >= 1) return `${Math.floor(days)}d`
-  const hours = delay / 3600000
-  if (hours >= 1) return `${Math.floor(hours)}h`
-  const minutes = delay / 60000
-  if (minutes >= 1) return `${Math.floor(minutes)}m`
-  return `${Math.floor(delay / 1000)}s`
-}
+  const initialRetryDelay = 2000
+  const retryDelayScalar = 1.5
+  let retryDelay = initialRetryDelay
 
-const showStreamInfo = str => {
-  if (streamInfo !== null) {
-    streamInfo.innerText = str
-    streamInfo.style = 'display: block;'
+  let pc = null
+  let offlineSince = null
+  let restartTimeout = null
+  let sessionUrl = ''
+  let offerData = ''
+  let queuedCandidates = []
+
+  const getOfflineTime = delay => {
+    const days = delay / 864000000
+    if (days >= 1) return `${Math.floor(days)}d`
+    const hours = delay / 3600000
+    if (hours >= 1) return `${Math.floor(hours)}h`
+    const minutes = delay / 60000
+    if (minutes >= 1) return `${Math.floor(minutes)}m`
+    return `${Math.floor(delay / 1000)}s`
   }
-}
 
-const unquoteCredential = v => (
-	JSON.parse(`"${v}"`)
-)
-
-const linkToIceServers = links => (
-	(links !== null) ? links.split(', ').map(link => {
-		const m = link.match(/^<(.+?)>; rel="ice-server"(; username="(.*?)"; credential="(.*?)"; credential-type="password")?/i)
-		const ret = {urls: [m[1]]}
-
-		if (m[3] !== undefined) {
-			ret.username = unquoteCredential(m[3])
-			ret.credential = unquoteCredential(m[4])
-			ret.credentialType = 'password'
-		}
-
-		return ret
-	}) : []
-)
-
-const parseOffer = offer => {
-	const ret = {iceUfrag: '', icePwd: '', medias: []}
-
-	for (const line of offer.split('\r\n')) {
-		if (line.startsWith('m=')) {
-			ret.medias.push(line.slice('m='.length))
-		} else if (ret.iceUfrag === '' && line.startsWith('a=ice-ufrag:')) {
-			ret.iceUfrag = line.slice('a=ice-ufrag:'.length)
-		} else if (ret.icePwd === '' && line.startsWith('a=ice-pwd:')) {
-			ret.icePwd = line.slice('a=ice-pwd:'.length)
-		}
-	}
-
-	return ret
-}
-
-const enableStereoOpus = section => {
-	let opusPayloadFormat = ''
-	let lines = section.split('\r\n')
-
-	for (let line of lines) {
-    line = line.toLowerCase()
-		if (line.startsWith('a=rtpmap:') && line.includes('opus/')) {
-			opusPayloadFormat = `a=fmtp:${line.slice(9).split(' ')[0]} `
-			break
-		}
-	}
-
-	if (opusPayloadFormat === '') {
-		return section
-	}
-
-	for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
-		if (line.startsWith(opusPayloadFormat)) {
-			if (!line.includes('stereo')) {
-				lines[i] += ';stereo=1'
-			}
-			if (!line.includes('sprop-stereo')) {
-				lines[i] += ';sprop-stereo=1'
-			}
-		}
-	}
-
-	return lines.join('\r\n')
-}
-
-const editOffer = (offer) => {
-	const sections = offer.sdp.split('m=')
-
-	for (let i = 0; i < sections.length; i++) {
-		const section = sections[i]
-		if (section.startsWith('audio')) {
-			sections[i] = enableStereoOpus(section)
-		}
-	}
-
-	offer.sdp = sections.join('m=')
-}
-
-const generateSdpFragment = (od, candidates) => {
-	const candidatesByMedia = {}
-	for (const candidate of candidates) {
-		const mid = candidate.sdpMLineIndex
-		if (candidatesByMedia[mid] === undefined) {
-			candidatesByMedia[mid] = []
-		}
-		candidatesByMedia[mid].push(candidate)
-	}
-
-	let frag = `a=ice-ufrag:${od.iceUfrag}\r\na=ice-pwd:${od.icePwd}\r\n`
-
-	for (let mid = 0; mid < od.medias.length; mid++) {
-    const candidates = candidatesByMedia[mid]
-		if (candidates !== undefined) {
-			frag += `m=${od.medias[mid]}\r\na=mid:${mid}\r\n`
-			for (const candidate of candidates) {
-				frag += `a=${candidate.candidate}\r\n`
-			}
-		}
-	}
-
-	return frag
-}
-
-const loadStream = () => {
-	requestICEServers()
-}
-
-const onError = (err) => {
-	if (restartTimeout === null) {
-    if (offlineSince === null) {
-      offlineSince = Date.now()
+  const showStreamInfo = str => {
+    if (streamInfo !== null) {
+      streamInfo.innerText = str
+      streamInfo.style = 'display: block;'
     }
-		showStreamInfo(`lynnya is offline (${getOfflineTime(Date.now() - offlineSince)})`)
-
-		if (pc !== null) {
-			pc.close()
-			pc = null
-		}
-
-		restartTimeout = window.setTimeout(() => {
-			restartTimeout = null
-			loadStream()
-		}, retryDelay)
-
-    retryDelay = retryDelay * retryDelayScalar
-
-		if (sessionUrl) {
-			fetch(sessionUrl, {method: 'DELETE'})
-		}
-		sessionUrl = ''
-
-		queuedCandidates = []
-	}
-}
-
-const sendLocalCandidates = (candidates) => {
-	fetch(sessionUrl + window.location.search, {
-		method: 'PATCH',
-		headers: {
-			'Content-Type': 'application/trickle-ice-sdpfrag',
-			'If-Match': '*',
-		},
-		body: generateSdpFragment(offerData, candidates),
-	})
-		.then(res => {
-			switch (res.status) {
-			case 204:
-				break
-			case 404:
-				showStreamInfo('stream not found')
-			default:
-				showStreamInfo(`bad status code ${res.status}`)
-			}
-		})
-		.catch(err => {
-			onError(err.toString())
-		})
-}
-
-const onLocalCandidate = (evt) => {
-	if (restartTimeout !== null) {
-		return
-	}
-
-	if (evt.candidate !== null) {
-		if (sessionUrl === '') {
-			queuedCandidates.push(evt.candidate)
-		} else {
-			sendLocalCandidates([evt.candidate])
-		}
-	}
-}
-
-const onRemoteAnswer = (sdp) => {
-	if (restartTimeout !== null) {
-		return
-	}
-
-  offlineSince = null
-  retryDelay = initialRetryDelay
-
-	pc.setRemoteDescription(new RTCSessionDescription({
-		type: 'answer', sdp
-	}))
-
-	if (queuedCandidates.length !== 0) {
-		sendLocalCandidates(queuedCandidates)
-		queuedCandidates = []
-	}
-}
-
-const sendOffer = (offer) => {
-	fetch('https://stream.lynnya.live/whep', {
-		method: 'POST',
-		headers: {'Content-Type': 'application/sdp'},
-		body: offer.sdp,
-	})
-		.then(res => {
-			switch (res.status) {
-			case 201:
-				break
-			case 404:
-				throw new Error('stream not found')
-			default:
-				throw new Error(`bad status code ${res.status}`)
-			}
-			sessionUrl = new URL(res.headers.get('location'), 'https://stream.lynnya.live').toString()
-			return res.text()
-		})
-		.then(sdp => onRemoteAnswer(sdp))
-		.catch(err => onError(err.toString()))
-}
-
-const createOffer = () => {
-	pc.createOffer()
-		.then(offer => {
-			editOffer(offer)
-			offerData = parseOffer(offer.sdp)
-			pc.setLocalDescription(offer)
-			sendOffer(offer)
-		})
-}
-
-const onConnectionState = () => {
-	if (restartTimeout !== null) {
-		return
-	}
-
-	if (pc.iceConnectionState === 'disconnected') {
-		onError('peer connection disconnected')
-	}
-}
-
-const onTrack = (evt) => {
-	if (streamInfo !== null) {
-    streamInfo.style = ''
-	  stream.srcObject = evt.streams[0]
   }
+
+  const unquoteCredential = v => (
+    JSON.parse(`"${v}"`)
+  )
+
+  const linkToIceServers = links => (
+    (links !== null) ? links.split(', ').map(link => {
+      const m = link.match(/^<(.+?)>; rel="ice-server"(; username="(.*?)"; credential="(.*?)"; credential-type="password")?/i)
+      const ret = {urls: [m[1]]}
+
+      if (m[3] !== undefined) {
+        ret.username = unquoteCredential(m[3])
+        ret.credential = unquoteCredential(m[4])
+        ret.credentialType = 'password'
+      }
+
+      return ret
+    }) : []
+  )
+
+  const parseOffer = offer => {
+    const ret = {iceUfrag: '', icePwd: '', medias: []}
+
+    for (const line of offer.split('\r\n')) {
+      if (line.startsWith('m=')) {
+        ret.medias.push(line.slice('m='.length))
+      } else if (ret.iceUfrag === '' && line.startsWith('a=ice-ufrag:')) {
+        ret.iceUfrag = line.slice('a=ice-ufrag:'.length)
+      } else if (ret.icePwd === '' && line.startsWith('a=ice-pwd:')) {
+        ret.icePwd = line.slice('a=ice-pwd:'.length)
+      }
+    }
+
+    return ret
+  }
+
+  const enableStereoOpus = section => {
+    let opusPayloadFormat = ''
+    let lines = section.split('\r\n')
+
+    for (let line of lines) {
+      line = line.toLowerCase()
+      if (line.startsWith('a=rtpmap:') && line.includes('opus/')) {
+        opusPayloadFormat = `a=fmtp:${line.slice(9).split(' ')[0]} `
+        break
+      }
+    }
+
+    if (opusPayloadFormat === '') {
+      return section
+    }
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
+      if (line.startsWith(opusPayloadFormat)) {
+        if (!line.includes('stereo')) {
+          lines[i] += ';stereo=1'
+        }
+        if (!line.includes('sprop-stereo')) {
+          lines[i] += ';sprop-stereo=1'
+        }
+      }
+    }
+
+    return lines.join('\r\n')
+  }
+
+  const editOffer = (offer) => {
+    const sections = offer.sdp.split('m=')
+
+    for (let i = 0; i < sections.length; i++) {
+      const section = sections[i]
+      if (section.startsWith('audio')) {
+        sections[i] = enableStereoOpus(section)
+      }
+    }
+
+    offer.sdp = sections.join('m=')
+  }
+
+  const generateSdpFragment = (od, candidates) => {
+    const candidatesByMedia = {}
+    for (const candidate of candidates) {
+      const mid = candidate.sdpMLineIndex
+      if (candidatesByMedia[mid] === undefined) {
+        candidatesByMedia[mid] = []
+      }
+      candidatesByMedia[mid].push(candidate)
+    }
+
+    let frag = `a=ice-ufrag:${od.iceUfrag}\r\na=ice-pwd:${od.icePwd}\r\n`
+
+    for (let mid = 0; mid < od.medias.length; mid++) {
+      const candidates = candidatesByMedia[mid]
+      if (candidates !== undefined) {
+        frag += `m=${od.medias[mid]}\r\na=mid:${mid}\r\n`
+        for (const candidate of candidates) {
+          frag += `a=${candidate.candidate}\r\n`
+        }
+      }
+    }
+
+    return frag
+  }
+
+  const loadStream = () => {
+    requestICEServers()
+  }
+
+  const onError = (err) => {
+    if (restartTimeout === null) {
+      if (offlineSince === null) {
+        offlineSince = Date.now()
+      }
+      showStreamInfo(`lynnya is offline (${getOfflineTime(Date.now() - offlineSince)})`)
+
+      if (pc !== null) {
+        pc.close()
+        pc = null
+      }
+
+      restartTimeout = window.setTimeout(() => {
+        restartTimeout = null
+        loadStream()
+      }, retryDelay)
+
+      retryDelay = retryDelay * retryDelayScalar
+
+      if (sessionUrl) {
+        fetch(sessionUrl, {method: 'DELETE'})
+      }
+      sessionUrl = ''
+
+      queuedCandidates = []
+    }
+  }
+
+  const sendLocalCandidates = (candidates) => {
+    fetch(sessionUrl + window.location.search, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/trickle-ice-sdpfrag',
+        'If-Match': '*',
+      },
+      body: generateSdpFragment(offerData, candidates),
+    })
+      .then(res => {
+        switch (res.status) {
+        case 204:
+          break
+        case 404:
+          showStreamInfo('stream not found')
+        default:
+          showStreamInfo(`bad status code ${res.status}`)
+        }
+      })
+      .catch(err => {
+        onError(err.toString())
+      })
+  }
+
+  const onLocalCandidate = (evt) => {
+    if (restartTimeout !== null) {
+      return
+    }
+
+    if (evt.candidate !== null) {
+      if (sessionUrl === '') {
+        queuedCandidates.push(evt.candidate)
+      } else {
+        sendLocalCandidates([evt.candidate])
+      }
+    }
+  }
+
+  const onRemoteAnswer = (sdp) => {
+    if (restartTimeout !== null) {
+      return
+    }
+
+    offlineSince = null
+    retryDelay = initialRetryDelay
+
+    pc.setRemoteDescription(new RTCSessionDescription({
+      type: 'answer', sdp
+    }))
+
+    if (queuedCandidates.length !== 0) {
+      sendLocalCandidates(queuedCandidates)
+      queuedCandidates = []
+    }
+  }
+
+  const sendOffer = (offer) => {
+    fetch('https://stream.lynnya.live/whep', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/sdp'},
+      body: offer.sdp,
+    })
+      .then(res => {
+        switch (res.status) {
+        case 201:
+          break
+        case 404:
+          throw new Error('stream not found')
+        default:
+          throw new Error(`bad status code ${res.status}`)
+        }
+        sessionUrl = new URL(res.headers.get('location'), 'https://stream.lynnya.live').toString()
+        return res.text()
+      })
+      .then(sdp => onRemoteAnswer(sdp))
+      .catch(err => onError(err.toString()))
+  }
+
+  const createOffer = () => {
+    pc.createOffer()
+      .then(offer => {
+        editOffer(offer)
+        offerData = parseOffer(offer.sdp)
+        pc.setLocalDescription(offer)
+        sendOffer(offer)
+      })
+  }
+
+  const onConnectionState = () => {
+    if (restartTimeout !== null) {
+      return
+    }
+
+    if (pc.iceConnectionState === 'disconnected') {
+      onError('peer connection disconnected')
+    }
+  }
+
+  const onTrack = (evt) => {
+    if (streamInfo !== null) {
+      streamInfo.style = ''
+      stream.srcObject = evt.streams[0]
+    }
+  }
+
+  const requestICEServers = () => {
+    fetch('https://stream.lynnya.live/whep', {method: 'OPTIONS'})
+      .then(res => {
+        pc = new RTCPeerConnection({
+          iceServers: linkToIceServers(res.headers.get('Link')),
+          sdpSemantics: 'unified-plan',
+        })
+
+        const direction = 'sendrecv'
+        pc.addTransceiver('video', { direction })
+        pc.addTransceiver('audio', { direction })
+
+        pc.onicecandidate = evt => onLocalCandidate(evt)
+        pc.oniceconnectionstatechange = () => onConnectionState()
+        pc.ontrack = evt => onTrack(evt)
+
+        createOffer()
+      })
+      .catch(err => onError(err.toString()))
+  }
+
+  const parseBoolString = (str, defaultVal) => {
+    str = (str || '')
+
+    if (['1', 'yes', 'true'].includes(str.toLowerCase())) {
+      return true
+    }
+    if (['0', 'no', 'false'].includes(str.toLowerCase())) {
+      return false
+    }
+    return defaultVal
+  }
+
+  const whepInit = () => {
+    loadStream()
+  }
+
+  document.addEventListener('DOMContentLoaded', whepInit)
 }
-
-const requestICEServers = () => {
-	fetch('https://stream.lynnya.live/whep', {method: 'OPTIONS'})
-		.then(res => {
-			pc = new RTCPeerConnection({
-				iceServers: linkToIceServers(res.headers.get('Link')),
-				sdpSemantics: 'unified-plan',
-			})
-
-			const direction = 'sendrecv'
-			pc.addTransceiver('video', { direction })
-			pc.addTransceiver('audio', { direction })
-
-			pc.onicecandidate = evt => onLocalCandidate(evt)
-			pc.oniceconnectionstatechange = () => onConnectionState()
-			pc.ontrack = evt => onTrack(evt)
-
-			createOffer()
-		})
-		.catch(err => onError(err.toString()))
-}
-
-const parseBoolString = (str, defaultVal) => {
-	str = (str || '')
-
-	if (['1', 'yes', 'true'].includes(str.toLowerCase())) {
-		return true
-	}
-	if (['0', 'no', 'false'].includes(str.toLowerCase())) {
-		return false
-	}
-	return defaultVal
-}
-
-const whepInit = () => {
-	loadStream()
-}
-
-document.addEventListener('DOMContentLoaded', whepInit)

@@ -1,12 +1,29 @@
 const crypto = require('crypto'),
+querystring = require('querystring'),
 fs = require('fs'),
 https = require('https'),
 WSServer = require('ws').Server,
 createDOMPurify = require('dompurify'),
-JSDOM = require('jsdom').JSDOM
+JSDOM = require('jsdom').JSDOM,
 
-const dataPath = './data.json',
-maxMessageLength = 500
+dataPath = './data.json',
+lynnyaYearEpoch = 2024,
+UTCDay = 86400000,
+getSubTime = () => new Date().setUTCMonth(new Date().getUTCMonth() + 1),
+sanitizeConfig = {
+  ALLOWED_TAGS: ['a', 'b', 'i', 's', 'u', 'br'],
+  ALLOWED_ATTR: ['href', 'target', 'rel']
+},
+sanitize = s => DOMPurify.sanitize(s, sanitizeConfig),
+validName = s => !/[^0-9a-z]/i.test(s),
+validHexColor = s => /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(s),
+
+defaultNameColor = '#aaaaaa',
+defaultTextColor = '#ffffff',
+defaultBgColor = '#202020',
+maxMessageLength = 500,
+maxMessageHistory = 50,
+socks = new Set()
 
 let data = {
   admins: [],
@@ -17,6 +34,16 @@ let data = {
   hashIterations: 10000,
   hashBytes: 64,
   hashDigest: 'sha512',
+  dailyRevenue: {},
+  dailySubs: {},
+  dailyDonations: {},
+  kofiVerificationToken: '',
+  kofiToken: {},
+  kofiSubTime: {},
+  kofiSubStreak: {},
+  kofiSubs: {},
+  kofiDonations: {},
+  tokenKofi: {},
   tokenNames: {},
   tokenHash: {},
   nameToken: {},
@@ -28,6 +55,21 @@ let data = {
   messageHistoryIndex: 0
 }
 
+const updateDailyRevenue = (sub = true, amount = 5) => {
+  const now = new Date()
+  const day = (now.getYear() - lynnyaYearEpoch + 1) * now.getDay()
+  if (sub) {
+    data.dailySubs[day] = (data.dailySubs[day] || 0) + 1
+  } else {
+    data.dailyDonations[day] = (data.dailyDonations[day] || 0) + donation
+  }
+  data.dailyRevenue[day] = (data.dailyRevenue[day] || 0) + amount
+}
+
+const isSubscribed = token => {
+  return Date.now() < data.kofiSubTime[data.tokenKofi[token]]
+}
+
 const saveData = () => {
   fs.writeFileSync(dataPath, JSON.stringify(data))
 }
@@ -36,11 +78,43 @@ if (fs.existsSync(dataPath)) {
   data = JSON.parse(fs.readFileSync(dataPath, 'utf8'))
 }
 
+const kofiHandler = payload => {
+  if (payload['verification_token'] === data.kofiVerificationToken) {
+    const email = payload['email']
+    const isSub = payload['type'] === 'Subscription'
+    const amount = Number(payload['amount'])
+
+    if (isSub) {
+      data.kofiSubTime[email] = getSubTime()
+      data.kofiSubs[email] = (data.kofiSubs[email] || 0) + 1
+      if (payload['is_first_subscription_payment']) {
+        data.kofiSubStreak[email] = 1
+      } else {
+        data.kofiSubStreak[email] = (data.kofiSubStreak[email] || 0) + 1
+      }
+    } else if (payload['type'] === 'Donation') {
+      data.kofiDonations[email] = (data.kofiDonations[email] || 0) + amount
+    }
+
+    updateDailyRevenue(sub = isSub, amount = amount)
+    saveData()
+  }
+}
+
 const window = new JSDOM('').window
 const DOMPurify = createDOMPurify(window)
 const https_server = https.createServer({
   cert: fs.readFileSync(data.cert),
   key: fs.readFileSync(data.key),
+}, (req, res) => {
+  if (req.method === 'POST') {
+    req.on('data', data => {
+      const payload = JSON.parse(querystring.parse(data.toString()).data)
+      res.writeHead(200)
+      res.end()
+      kofiHandler(payload)
+    })
+  }
 })
 https_server.listen(data.port)
 
@@ -48,21 +122,16 @@ const wss = new WSServer({
   server: https_server
 })
 
-const sanitizeConfig = {
-  ALLOWED_TAGS: ['a', 'b', 'i', 's', 'u', 'br'],
-  ALLOWED_ATTR: ['href', 'target', 'rel']
-},
-sanitize = s => DOMPurify.sanitize(s, sanitizeConfig),
-validName = s => !/[^0-9a-z]/i.test(s),
-validHexColor = s => /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(s),
-
-defaultNameColor = '#aaaaaa',
-defaultTextColor = '#ffffff',
-defaultBgColor = '#202020',
-maxMessageHistory = 50,
-socks = new Set()
-
 const sockSend = (sock, payload) => sock.send(JSON.stringify(payload))
+
+const updateParticipants = (sock, action) => {
+  const participantsStr = JSON.stringify({
+    type: 'participants-update',
+    name: sock.name,
+    action: action
+  });
+  [...socks].filter(s => s.name !== sock.name).forEach(s => s.send(participantsStr))
+}
 
 const authToken = (sock, token, name, newName=false) => {
   const names = data.tokenNames[token]
@@ -75,8 +144,13 @@ const authToken = (sock, token, name, newName=false) => {
     sock.token = token
     sock.name = name
     sock.nameColor = data.nameColor[name] || defaultNameColor
-    sock.textColor = data.nameTextColor[name] || defaultTextColor
-    sock.bgColor = data.nameBgColor[name] || defaultBgColor
+    if (isSubscribed(token)) {
+      sock.textColor = data.nameTextColor[name] || defaultTextColor
+      sock.bgColor = data.nameBgColor[name] || defaultBgColor
+    } else {
+      sock.textColor = defaultTextColor
+      sock.bgColor = defaultBgColor
+    }
     if (newName) {
       data.nameToken[name] = token
       names.push(sock.name)
@@ -152,8 +226,13 @@ const payloadHandlers = {
           sock.token = token
           sock.name = payload.name
           sock.nameColor = data.nameColor[sock.name] || defaultNameColor
-          sock.textColor = data.nameTextColor[sock.name] || defaultTextColor
-          sock.bgColor = data.nameBgColor[sock.name] || defaultBgColor
+          if (isSubscribed(token)) {
+            sock.textColor = data.nameTextColor[sock.name] || defaultTextColor
+            sock.bgColor = data.nameBgColor[sock.name] || defaultBgColor
+          } else {
+            sock.textColor = defaultTextColor
+            sock.bgColor = defaultBgColor
+          }
           sockSend(sock, {
             type: 'auth-password-ok',
             token: sock.token,
@@ -206,6 +285,13 @@ const payloadHandlers = {
       const user = [...socks].find(s => s.name === payload.name)
       if (user !== undefined) {
         const body = sanitize(payload.body)
+        if (isSubscribed(token)) {
+          sock.textColor = data.nameTextColor[sock.name] || defaultTextColor
+          sock.bgColor = data.nameBgColor[sock.name] || defaultBgColor
+        } else {
+          sock.textColor = defaultTextColor
+          sock.bgColor = defaultBgColor
+        }
         user.send(JSON.stringify({
           type: 'priv-message',
           name: sock.name,
@@ -236,6 +322,14 @@ const payloadHandlers = {
 
       if (cleanBody.length > maxMessageLength) return
 
+      if (isSubscribed(token)) {
+        sock.textColor = data.nameTextColor[sock.name] || defaultTextColor
+        sock.bgColor = data.nameBgColor[sock.name] || defaultBgColor
+      } else {
+        sock.textColor = defaultTextColor
+        sock.bgColor = defaultBgColor
+      }
+
       const message = {
         type: 'message',
         hasAvatar: data.nameAvatar[sock.name] !== undefined,
@@ -261,16 +355,76 @@ const payloadHandlers = {
     }
   },
   'command-password': (sock, payload) => {
-    if (payload.hasOwnProperty('token') && payload.hasOwnProperty('password')) {
+    if (sock.token !== undefined && payload.hasOwnProperty('password')) {
       hashPassword(payload.password, hash => {
-        data.tokenHash[payload.token] = hash
+        data.tokenHash[sock.token] = hash
+        saveData()
         sockSend(sock, {
           type: 'command-password-ok'
         })
       })
     } else {
       sockSend(sock, {
-        type: 'command-password-fail'
+        type: 'command-password-auth-required'
+      })
+    }
+  },
+  'command-kofi': (sock, payload) => {
+    if (sock.token !== undefined && payload.hasOwnProperty('kofi')) {
+      const newKofi = payload.kofi
+      const existingToken = data.kofiToken[newKofi]
+      if (existingToken !== undefined && sock.token !== existingToken) {
+        return sockSend(sock, {
+          type: 'command-kofi-auth-fail'
+        })
+      }
+      const currentKofi = data.tokenKofi[sock.token]
+      data.tokenKofi[sock.token] = newKofi
+      data.kofiToken[newKofi] = sock.token
+      delete data.kofiToken[currentKofi]
+
+      const currentSubTime = data.kofiSubTime[currentKofi] || 0
+      const newSubTime = data.kofiSubTime[newKofi] || 0
+
+      if (currentSubTime !== 0 || newSubTime !== 0) {
+        const newSubLatest = newSubTime > currentSubTime
+        data.kofiSubTime[newKofi] = newSubLatest ? newSubTime : currentSubTime
+        delete data.kofiSubTime[currentKofi]
+
+        data.kofiSubs[newKofi] = (data.kofiSubs[currentKofi] || 0) + (data.kofiSubs[newKofi] || 0)
+        delete data.kofiSubs[currentKofi]
+
+        const currentSubDate = new Date(currentSubTime)
+        const currentStreak = data.kofiSubStreak[currentKofi] || 0
+        const newSubDate = new Date(newSubTime)
+        const newStreak = data.kofiSubStreak[currentKofi] || 0
+        let streak = newSubLatest ? newStreak : currentStreak
+
+        if (newSubLatest && currentSubTime > 0) {
+          if (newSubTime - currentSubDate.setUTCMonth(currentSubDate.getUTCMonth() + newStreak) <= UTCDay) {
+            streak += currentStreak
+          }
+        } else if (!newSubLatest && newSubTime > 0) {
+          if (currentSubTime - newSubDate.setUTCMonth(newSubDate.getUTCMonth() + currentStreak) <= UTCDay) {
+            streak += newStreak
+          }
+        }
+
+        data.kofiSubStreak[newKofi] = streak
+        delete data.kofiSubStreak[currentKofi]
+      }
+
+      data.kofiDonations[newKofi] = (data.kofiDonations[currentKofi] || 0) + (data.kofiDonations[newKofi] || 0)
+      delete data.kofiDonations[currentKofi]
+
+      saveData()
+
+        sockSend(sock, {
+          type: 'command-kofi-ok'
+        })
+    } else {
+      sockSend(sock, {
+        type: 'command-kofi-auth-required'
       })
     }
   },
@@ -289,7 +443,7 @@ const payloadHandlers = {
   },
   'command-color': (sock, payload) => {
     if (payload.hasOwnProperty('color')) {
-      if (sock.name !== 'anon') {
+      if (sock.token !== undefined) {
         if (validHexColor(payload.color)) {
           sock.nameColor = payload.color
           data.nameColor[sock.name] = sock.nameColor
@@ -313,19 +467,25 @@ const payloadHandlers = {
   },
   'command-textcolor': (sock, payload) => {
     if (payload.hasOwnProperty('color')) {
-      if (sock.name !== 'anon') {
-        if (validHexColor(payload.color)) {
-          sock.textColor = payload.color
-          data.nameTextColor[sock.name] = sock.textColor
-          saveData()
+      if (sock.token !== undefined) {
+        if (isSubscribed(sock.token)) {
+          if (validHexColor(payload.color)) {
+            sock.textColor = payload.color
+            data.nameTextColor[sock.name] = sock.textColor
+            saveData()
 
-          sockSend(sock, {
-            type: 'command-textcolor-ok',
-            color: sock.textColor
-          })
+            sockSend(sock, {
+              type: 'command-textcolor-ok',
+              color: sock.textColor
+            })
+          } else {
+            sockSend(sock, {
+              type: 'command-color-invalid'
+            })
+          }
         } else {
           sockSend(sock, {
-            type: 'command-color-invalid'
+            type: 'command-color-sub-required'
           })
         }
       } else {
@@ -337,19 +497,25 @@ const payloadHandlers = {
   },
   'command-bgcolor': (sock, payload) => {
     if (payload.hasOwnProperty('color')) {
-      if (sock.name !== 'anon') {
-        if (validHexColor(payload.color)) {
-          sock.bgColor = payload.color
-          data.nameBgColor[sock.name] = sock.bgColor
-          saveData()
+      if (sock.token !== undefined) {
+        if (isSubscribed(sock.token)) {
+          if (validHexColor(payload.color)) {
+            sock.bgColor = payload.color
+            data.nameBgColor[sock.name] = sock.bgColor
+            saveData()
 
-          sockSend(sock, {
-            type: 'command-bgcolor-ok',
-            color: sock.bgColor
-          })
+            sockSend(sock, {
+              type: 'command-bgcolor-ok',
+              color: sock.bgColor
+            })
+          } else {
+            sockSend(sock, {
+              type: 'command-color-invalid'
+            })
+          }
         } else {
           sockSend(sock, {
-            type: 'command-color-invalid'
+            type: 'command-color-sub-required'
           })
         }
       } else {
@@ -360,7 +526,7 @@ const payloadHandlers = {
     }
   },
   'avatar-upload': (sock, payload) => {
-    if (sock.name !== 'anon') {
+    if (sock.token !== undefined) {
       fs.writeFile(`/var/www/html/avatars/${sock.name}.png`, payload.data.replace('data:image/png;base64,', ''), 'base64', err => {
         if (err) {
           sockSend(sock, {
@@ -384,15 +550,6 @@ const payloadHandlers = {
   },
 }
 
-const updateParticipants = (sock, action) => {
-  const participantsStr = JSON.stringify({
-    type: 'participants-update',
-    name: sock.name,
-    action: action
-  });
-  [...socks].filter(s => s.name !== sock.name).forEach(s => s.send(participantsStr))
-}
-
 wss.on('connection', sock => {
   socks.add(sock)
   sock.name = 'anon'
@@ -407,7 +564,7 @@ wss.on('connection', sock => {
 
   sock.on('close', () => {
     socks.delete(sock)
-    if (sock.name !== 'anon') {
+    if (sock.token !== undefined) {
       updateParticipants(sock, 'left')
     }
   })
