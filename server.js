@@ -26,7 +26,7 @@ maxMessageHistory = 50,
 socks = new Set()
 
 let data = {
-  admins: [],
+  broadcaster: '',
   cert: 'fullchain.pem',
   key: 'privkey.pem',
   port: 8080,
@@ -67,7 +67,7 @@ const updateDailyRevenue = (isSub, amount) => {
 }
 
 const isSubscribed = token => {
-  return Date.now() < data.kofiSubTime[data.tokenKofi[token]]
+  return token === data.broadcaster || Date.now() < data.kofiSubTime[data.tokenKofi[token]]
 }
 
 const saveData = () => {
