@@ -321,10 +321,10 @@ const payloadHandlers = {
   'command-stats-ok': payload => {
     switch (payload.view) {
       case 'bal':
-        const currency = payload.currency || 0
-        const currencyStr = currency > 1 ? `${currencyEmoji} ${currencyName}s` : `${currencyEmoji} ${currencyName}`
-        const premiumCurrency = payload.premiumCurrency || 0
-        const premiumCurrencyStr = premiumCurrency > 1 ? `${premiumCurrencyEmoji} ${premiumCurrencyName}s` : `${premiumCurrencyEmoji} ${premiumCurrencyName}`
+        const currency = payload.stats.currency || 0
+        const currencyStr = currency !== 1 ? `${currencyEmoji} ${currencyName}s` : `${currencyEmoji} ${currencyName}`
+        const premiumCurrency = payload.stats.premiumCurrency || 0
+        const premiumCurrencyStr = premiumCurrency !== 1 ? `${premiumCurrencyEmoji} ${premiumCurrencyName}s` : `${premiumCurrencyEmoji} ${premiumCurrencyName}`
         systemMessage(`<b>${currency}</b>${currencyStr}, <b>${premiumCurrency}</b>${premiumCurrencyStr}`)
         break
     }
