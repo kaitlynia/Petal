@@ -30,8 +30,8 @@ dailyCurrencyMax = 100,
 dailyCurrencySubMin = 50,
 dailyCurrencySubMax = 250,
 dailyCurrencySubRatio = (dailyCurrencySubMin + dailyCurrencySubMax) / (dailyCurrencyMin + dailyCurrencyMax),
-dailyPremiumChance = 0.05,
-dailyPremiumSubChance = 0.1,
+dailyPremiumChance = 0.1,
+dailyPremiumSubChance = 0.2,
 dollarPerPremiumCurrency = 1
 
 let data = {
@@ -631,7 +631,7 @@ const payloadHandlers = {
         }
         stats.currencyEarned = (stats.currencyEarned || 0) + currency
         if (gotPremium) {
-          stats.premiumCurrencyEarned = (stats.premiumCurrencyEarned || 0) + 1
+          stats.premiumCurrency = (stats.premiumCurrency || 0) + 1
           stats.premiumCurrencyEarned = (stats.premiumCurrencyEarned || 0) + 1
         }
 
