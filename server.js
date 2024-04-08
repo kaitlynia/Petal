@@ -30,6 +30,7 @@ dailyCurrencyMin = 50,
 dailyCurrencyMax = 100,
 dailyCurrencySubMin = 50,
 dailyCurrencySubMax = 250,
+dailyCurrencySubRatio = (dailyCurrencySubMin + dailyCurrencySubMax) / (dailyCurrencyMin + dailyCurrencyMax),
 dailyPremiumChance = 0.05,
 dailyPremiumSubChance = 0.1,
 dollarPerPremiumCurrency = 1
@@ -50,8 +51,10 @@ let data = {
   kofiToken: {},
   kofiSubTime: {},
   kofiSubStreak: {},
-  kofiSubs: {},
+  kofiMonthsSubbed: {},
+  kofiSubsTotal: {},
   kofiDonations: {},
+  kofiTotal: {},
   tokenKofi: {},
   tokenNames: {},
   tokenHash: {},
@@ -85,11 +88,15 @@ const updateDailyRevenue = (isSub, amount) => {
   data.dailyRevenue[day] = (data.dailyRevenue[day] || 0) + amount
 }
 
-const awardPremiumCurrency = (token, totalDonations) => {
-  const claimed = (data.tokenStats[token] || {}).premiumCurrencyClaimed
-  const award = ~~((totalDonations - claimed) / dollarPerPremiumCurrency)
-  const currency = (data.tokenStats[token] || {}).premiumCurrency
-  Object.assign(data.tokenStats[token], {
+const awardPremiumUsingTotal = (token, total) => {
+  if (data.tokenStats[token] === undefined) {
+    data.tokenStats[token] = {}
+  }
+  const stats = data.tokenStats[token]
+  const claimed = stats.premiumCurrencyClaimed
+  const award = ~~((total - claimed) / dollarPerPremiumCurrency)
+  const currency = stats.premiumCurrency
+  Object.assign(stats, {
     premiumCurrencyClaimed: claimed + award,
     premiumCurrency: currency + award,
   })
@@ -100,6 +107,12 @@ const isSubscribed = token => {
   return token === data.broadcaster || Date.now() < data.kofiSubTime[data.tokenKofi[token]]
 }
 
+const timeUntilNextDay = time => {
+  let nextDay = new Date(time)
+  nextDay.setUTCDate(nextDay.getUTCDate() + 1)
+  return Date.UTC(nextDay.getUTCFullYear(), nextDay.getUTCMonth(), nextDay.getUTCDate()) - Date.now()
+}
+
 const kofiHandler = payload => {
   if (payload['verification_token'] === data.kofiVerificationToken) {
     const kofi = payload['email']
@@ -108,7 +121,8 @@ const kofiHandler = payload => {
 
     if (isSub) {
       data.kofiSubTime[kofi] = getSubTime()
-      data.kofiSubs[kofi] = (data.kofiSubs[kofi] || 0) + 1
+      data.kofiMonthsSubbed[kofi] = (data.kofiMonthsSubbed[kofi] || 0) + 1
+      data.kofiSubsTotal[kofi] = (data.kofiSubsTotal[kofi] || 0) + amount
       if (payload['is_first_subscription_payment']) {
         data.kofiSubStreak[kofi] = 1
       } else {
@@ -116,11 +130,12 @@ const kofiHandler = payload => {
       }
     } else {
       data.kofiDonations[kofi] = (data.kofiDonations[kofi] || 0) + amount
-      const token = data.kofiToken[kofi]
-      if (token !== undefined) {
-        awardPremiumCurrency(token, data.kofiDonations[kofi])
+    }
 
-      }
+    data.kofiTotal[kofi] = (data.kofiTotal[kofi] || 0) + amount
+    const token = data.kofiToken[kofi]
+    if (token !== undefined) {
+      awardPremiumUsingTotal(token, data.kofiTotal[kofi])
     }
 
     updateDailyRevenue(isSub, amount)
@@ -437,12 +452,14 @@ const payloadHandlers = {
       const newSubTime = data.kofiSubTime[newKofi] || 0
 
       if (currentSubTime !== 0 || newSubTime !== 0) {
+        data.kofiMonthsSubbed[newKofi] = (data.kofiMonthsSubbed[currentKofi] || 0) + (data.kofiMonthsSubbed[newKofi] || 0)
+        delete data.kofiMonthsSubbed[currentKofi]
+        data.kofiSubsTotal[newKofi] = (data.kofiSubsTotal[currentKofi] || 0) + (data.kofiSubsTotal[newKofi] || 0)
+        delete data.kofiSubsTotal[currentKofi]
+
         const newSubLatest = newSubTime > currentSubTime
         data.kofiSubTime[newKofi] = newSubLatest ? newSubTime : currentSubTime
         delete data.kofiSubTime[currentKofi]
-
-        data.kofiSubs[newKofi] = (data.kofiSubs[currentKofi] || 0) + (data.kofiSubs[newKofi] || 0)
-        delete data.kofiSubs[currentKofi]
 
         const currentSubDate = new Date(currentSubTime)
         const currentStreak = data.kofiSubStreak[currentKofi] || 0
@@ -466,13 +483,16 @@ const payloadHandlers = {
 
       data.kofiDonations[newKofi] = (data.kofiDonations[currentKofi] || 0) + (data.kofiDonations[newKofi] || 0)
       delete data.kofiDonations[currentKofi]
-      awardPremiumCurrency(sock.token, data.kofiDonations[newKofi])
 
+      data.kofiTotal[newKofi] = (data.kofiTotal[currentKofi] || 0) + (data.kofiTotal[newKofi] || 0)
+      delete data.kofiTotal[currentKofi]
+
+      awardPremiumUsingTotal(sock.token, data.kofiTotal[newKofi])
       saveData()
 
-        sockSend(sock, {
-          type: 'command-kofi-ok'
-        })
+      sockSend(sock, {
+        type: 'command-kofi-ok'
+      })
     } else {
       sockSend(sock, {
         type: 'command-kofi-auth-required'
@@ -576,23 +596,52 @@ const payloadHandlers = {
       }
     }
   },
-  // 'command-daily': (sock, payload) => {
-  //   if (sock.token !== undefined) {
-  //     const stats = data.tokenStats[sock.token]
-  //     const dailyTime = stats.dailyTime || 0
-  //     if ((data.tokenStats[sock.token] || {dailyTime: 0}).dailyTime)
-  //     sub = isSubscribed(sock.token)
-  //     const min = sub ? dailyCurrencySubMin : dailyCurrencyMin
-  //     const max = sub ? dailyCurrencySubMax : dailyCurrencyMax
-  //     base = Math.random() * (max - min) + min
+  'command-daily': (sock, payload) => {
+    if (sock.token !== undefined) {
+      if (data.tokenStats[sock.token] === undefined) {
+        data.tokenStats[sock.token] = {}
+      }
+      const stats = data.tokenStats[sock.token]
+      const delta = timeUntilNextDay(stats.dailyTime || 0)
 
+      if (delta <= 0) {
+        const sub = isSubscribed(sock.token)
+        const min = sub ? dailyCurrencySubMin : dailyCurrencyMin
+        const max = sub ? dailyCurrencySubMax : dailyCurrencyMax
+        const currency = Math.random() * (max - min) + min
+        const premiumChance = sub ? dailyPremiumSubChance : dailyPremiumChance
+        const gotPremium = Math.random() < premiumChance
 
-  //   } else {
-  //     sockSend(sock, {
-  //       type: 'command-daily-auth-required'
-  //     })
-  //   }
-  // },
+        stats.dailyTime = Date.now()
+        stats.currency = (stats.currency || 0) + currency
+        if (sub) {
+          stats.currencyEarnedFromSub = (stats.currencyEarnedFromSub || 0) + ~~(currency / dailyCurrencySubRatio)
+        }
+        stats.currencyEarned = (stats.currencyEarned || 0) + currency
+        if (gotPremium) {
+          stats.premiumCurrency = (stats.currencyEarned || 0) + currency
+        }
+
+        saveData()
+        sockSend(sock, {
+          type: 'command-daily-ok',
+          sub: sub,
+          currency: currency,
+          premiumCurrency: gotPremium ? 1 : 0,
+          time: timeUntilNextDay(stats.dailyTime)
+        })
+      } else {
+        sockSend(sock, {
+          type: 'command-daily-fail',
+          time: delta
+        })
+      }
+    } else {
+      sockSend(sock, {
+        type: 'command-daily-auth-required'
+      })
+    }
+  },
 }
 
 wss.on('connection', sock => {

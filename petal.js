@@ -273,7 +273,17 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     'avatar-upload-auth-required': payload => {
       systemMessage('only named users can upload an avatar. use /name to name yourself')
-    }
+    },
+    'command-daily-ok': payload => {
+      const premiumText = payload.premiumCurrency > 0 ? ' +<b>' + payload.premiumCurrency + '</b>' + premiumCurrencyEmoji : ''
+      systemMessage(`+<b>${payload.currency}</b>${currencyEmoji} (2x sub bonus)${premiumText} | next daily: ${formatTimeDelta(payload.time)}`)
+    },
+    'command-daily-fail': payload => {
+      systemMessage(`next daily: ${formatTimeDelta(payload.time)}`)
+    },
+    'command-daily-auth-required': payload => {
+      systemMessage('only named users can claim daily currency. use /name to name yourself')
+    },
   }
 
   const events = {
@@ -525,6 +535,15 @@ document.addEventListener('DOMContentLoaded', () => {
         return -1
       }
     },
+    daily: args => {
+      if (userData.token !== undefined) {
+        send({
+          type: 'command-daily',
+        })
+      } else {
+        payloadHandlers['command-daily-auth-required']()
+      }
+    }
   }
 
   const tryCommand = content => {
@@ -677,14 +696,29 @@ if (streamInfo !== null) {
   let offerData = ''
   let queuedCandidates = []
 
-  const getOfflineTime = delay => {
-    const days = delay / 864000000
-    if (days >= 1) return `${Math.floor(days)}d`
-    const hours = delay / 3600000
-    if (hours >= 1) return `${Math.floor(hours)}h`
-    const minutes = delay / 60000
-    if (minutes >= 1) return `${Math.floor(minutes)}m`
-    return `${Math.floor(delay / 1000)}s`
+  const formatTimeDelta = delta => {
+    let str = ''
+
+    const days = delta / 86400000
+    if (days >= 1) {
+      str += ` ${Math.floor(days)}d`
+      delta %= 86400000
+    }
+
+    const hours = delta / 3600000
+    if (hours >= 1) {
+      str += ` ${Math.floor(hours)}h`
+      delta %= 3600000
+    }
+
+    const minutes = delta / 60000
+    if (minutes >= 1) {
+      str += ` ${Math.floor(minutes)}m`
+      delta %= 60000
+    }
+
+    str += ` ${Math.floor(delta / 1000)}s`
+    return str.slice(1)
   }
 
   const showStreamInfo = str => {
@@ -807,7 +841,7 @@ if (streamInfo !== null) {
       if (offlineSince === null) {
         offlineSince = Date.now()
       }
-      showStreamInfo(`lynnya is offline (${getOfflineTime(Date.now() - offlineSince)})`)
+      showStreamInfo(`lynnya is offline (${formatTimeDelta(Date.now() - offlineSince)})`)
 
       if (pc !== null) {
         pc.close()
