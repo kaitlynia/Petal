@@ -428,11 +428,14 @@ document.addEventListener('DOMContentLoaded', () => {
             type: 'command-kofi',
             kofi: args
           })
+          return 1
         } else {
           systemMessage('invalid email address.')
+          return -1
         }
       } else {
         payloadHandlers['command-kofi-auth-required']()
+        return 1
       }
     },
     password: args => {
@@ -565,8 +568,10 @@ document.addEventListener('DOMContentLoaded', () => {
         send({
           type: 'command-daily',
         })
+        return 1
       } else {
         payloadHandlers['command-daily-auth-required']()
+        return 1
       }
     }
   }
