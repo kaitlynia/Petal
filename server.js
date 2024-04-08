@@ -659,7 +659,7 @@ const payloadHandlers = {
     if (sock.token !== undefined) {
       sockSend(sock, {
         type: 'command-stats-ok',
-        stats: sock.tokenStats[token] || {},
+        stats: sock.tokenStats[sock.token] || {},
         view: payload.view || 'stats'
       })
     } else {
