@@ -116,6 +116,31 @@ document.addEventListener('DOMContentLoaded', () => {
     return url.endsWith('/') ? url.slice(0, -1) : url
   }
 
+  const formatTimeDelta = delta => {
+    let str = ''
+
+    const days = delta / 86400000
+    if (days >= 1) {
+      str += ` ${Math.floor(days)}d`
+      delta %= 86400000
+    }
+
+    const hours = delta / 3600000
+    if (hours >= 1) {
+      str += ` ${Math.floor(hours)}h`
+      delta %= 3600000
+    }
+
+    const minutes = delta / 60000
+    if (minutes >= 1) {
+      str += ` ${Math.floor(minutes)}m`
+      delta %= 60000
+    }
+
+    str += ` ${Math.floor(delta / 1000)}s`
+    return str.slice(1)
+  }
+
   const send = payload => server.send(JSON.stringify(payload))
 
   const payloadHandlers = {
@@ -695,31 +720,6 @@ if (streamInfo !== null) {
   let sessionUrl = ''
   let offerData = ''
   let queuedCandidates = []
-
-  const formatTimeDelta = delta => {
-    let str = ''
-
-    const days = delta / 86400000
-    if (days >= 1) {
-      str += ` ${Math.floor(days)}d`
-      delta %= 86400000
-    }
-
-    const hours = delta / 3600000
-    if (hours >= 1) {
-      str += ` ${Math.floor(hours)}h`
-      delta %= 3600000
-    }
-
-    const minutes = delta / 60000
-    if (minutes >= 1) {
-      str += ` ${Math.floor(minutes)}m`
-      delta %= 60000
-    }
-
-    str += ` ${Math.floor(delta / 1000)}s`
-    return str.slice(1)
-  }
 
   const showStreamInfo = str => {
     if (streamInfo !== null) {
