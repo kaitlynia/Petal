@@ -7,7 +7,6 @@ createDOMPurify = require('dompurify'),
 JSDOM = require('jsdom').JSDOM,
 
 dataPath = './data.json',
-lynnyaYearEpoch = 2024,
 UTCDay = 86400000,
 getSubTime = () => new Date().setUTCMonth(new Date().getUTCMonth() + 1),
 
@@ -78,14 +77,14 @@ if (fs.existsSync(dataPath)) {
 }
 
 const updateDailyRevenue = (isSub, amount) => {
-  const now = new Date()
-  const day = (now.getUTCFullYear() - lynnyaYearEpoch + 1) * now.getDay()
+  const date = new Date()
+  const dateKey = `${date.getUTCFullYear()}-${('0'+date.getUTCMonth()).slice(-2)}-${('0'+date.getUTCDate()).slice(-2)}`
   if (isSub) {
-    data.dailySubs[day] = (data.dailySubs[day] || 0) + 1
+    data.dailySubs[dateKey] = (data.dailySubs[dateKey] || 0) + 1
   } else {
-    data.dailyDonations[day] = (data.dailyDonations[day] || 0) + donation
+    data.dailyDonations[dateKey] = (data.dailyDonations[dateKey] || 0) + donation
   }
-  data.dailyRevenue[day] = (data.dailyRevenue[day] || 0) + amount
+  data.dailyRevenue[dateKey] = (data.dailyRevenue[dateKey] || 0) + amount
 }
 
 const awardPremiumUsingTotal = (token, total) => {
