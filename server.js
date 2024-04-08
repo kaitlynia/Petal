@@ -93,12 +93,14 @@ const awardPremiumUsingTotal = (token, total) => {
     data.tokenStats[token] = {}
   }
   const stats = data.tokenStats[token]
-  const claimed = stats.premiumCurrencyClaimed
+  const claimed = stats.premiumCurrencyClaimed || 0
   const award = ~~((total - claimed) / dollarPerPremiumCurrency)
-  const currency = stats.premiumCurrency
+  const currency = stats.premiumCurrency || 0
+  const currencyEarned = stats.premiumCurrencyEarned || 0
   Object.assign(stats, {
     premiumCurrencyClaimed: claimed + award,
     premiumCurrency: currency + award,
+    premiumCurrencyEarned: currencyEarned + award
   })
   return award
 }
@@ -111,6 +113,12 @@ const timeUntilNextDay = time => {
   let nextDay = new Date(time)
   nextDay.setUTCDate(nextDay.getUTCDate() + 1)
   return Date.UTC(nextDay.getUTCFullYear(), nextDay.getUTCMonth(), nextDay.getUTCDate()) - Date.now()
+}
+
+const sockSend = (sock, payload) => sock.send(JSON.stringify(payload))
+const tryTokenSend = (token, payload) => {
+  const sock = [...socks].find(s => s.token === token)
+  if (sock !== undefined) sockSend(sock, payload)
 }
 
 const kofiHandler = payload => {
@@ -135,7 +143,12 @@ const kofiHandler = payload => {
     data.kofiTotal[kofi] = (data.kofiTotal[kofi] || 0) + amount
     const token = data.kofiToken[kofi]
     if (token !== undefined) {
-      awardPremiumUsingTotal(token, data.kofiTotal[kofi])
+      const award = awardPremiumUsingTotal(token, data.kofiTotal[kofi])
+      tryTokenSend(token, {
+        type: 'kofi-action',
+        amount: award,
+        method: isSub ? 'sub' : 'donation',
+      })
     }
 
     updateDailyRevenue(isSub, amount)
@@ -163,8 +176,6 @@ https_server.listen(data.port)
 const wss = new WSServer({
   server: https_server
 })
-
-const sockSend = (sock, payload) => sock.send(JSON.stringify(payload))
 
 const updateParticipants = (sock, action) => {
   const participantsStr = JSON.stringify({
@@ -487,11 +498,13 @@ const payloadHandlers = {
       data.kofiTotal[newKofi] = (data.kofiTotal[currentKofi] || 0) + (data.kofiTotal[newKofi] || 0)
       delete data.kofiTotal[currentKofi]
 
-      awardPremiumUsingTotal(sock.token, data.kofiTotal[newKofi])
+      const award = awardPremiumUsingTotal(sock.token, data.kofiTotal[newKofi])
       saveData()
 
       sockSend(sock, {
-        type: 'command-kofi-ok'
+        type: 'command-kofi-ok',
+        sub: isSubscribed(sock.token),
+        premiumCurrency: award,
       })
     } else {
       sockSend(sock, {
@@ -608,7 +621,7 @@ const payloadHandlers = {
         const sub = isSubscribed(sock.token)
         const min = sub ? dailyCurrencySubMin : dailyCurrencyMin
         const max = sub ? dailyCurrencySubMax : dailyCurrencyMax
-        const currency = Math.random() * (max - min) + min
+        const currency = ~~(Math.random() * (max - min) + min)
         const premiumChance = sub ? dailyPremiumSubChance : dailyPremiumChance
         const gotPremium = Math.random() < premiumChance
 
@@ -619,7 +632,8 @@ const payloadHandlers = {
         }
         stats.currencyEarned = (stats.currencyEarned || 0) + currency
         if (gotPremium) {
-          stats.premiumCurrency = (stats.currencyEarned || 0) + currency
+          stats.premiumCurrencyEarned = (stats.premiumCurrencyEarned || 0) + 1
+          stats.premiumCurrencyEarned = (stats.premiumCurrencyEarned || 0) + 1
         }
 
         saveData()
@@ -639,6 +653,19 @@ const payloadHandlers = {
     } else {
       sockSend(sock, {
         type: 'command-daily-auth-required'
+      })
+    }
+  },
+  'command-stats': (sock, payload) => {
+    if (sock.token !== undefined) {
+      sockSend(sock, {
+        type: 'command-stats-ok',
+        stats: sock.tokenStats[token] || {},
+        view: payload.view || 'stats'
+      })
+    } else {
+      sockSend(sock, {
+        type: 'command-stats-auth-required'
       })
     }
   },

@@ -5,7 +5,9 @@ document.addEventListener('DOMContentLoaded', () => {
   entry = document.querySelector('#entry'),
   passwordChar = '⬤',
   currencyEmoji = '&#x1F33A;',
+  currencyName = 'Petal',
   premiumCurrencyEmoji = '&#x1F338;',
+  premiumCurrencyName = 'Blossom',
   maxMessageLength = 500,
   sanitize = s => DOMPurify.sanitize(s, sanitizeConfig),
   validName = s => !/[^0-9a-z]/i.test(s),
@@ -255,7 +257,12 @@ document.addEventListener('DOMContentLoaded', () => {
       systemMessage('only named users can set a Ko-fi email. use /name to name yourself')
     },
     'command-kofi-ok': payload => {
-      systemMessage('changed Ko-fi email successfully')
+      const premiumText = payload.premiumCurrency > 0 ? `, +<b>${payload.premiumCurrency}</b>${premiumCurrencyEmoji}` : ''
+      systemMessage(`changed Ko-fi email successfully. status: ${payload.sub ? '' : 'not '}subscribed${premiumText}`)
+    },
+    'kofi-action': payload => {
+      const premiumText = payload.premiumCurrency > 0 ? ` +<b>${payload.premiumCurrency}</b>${premiumCurrencyEmoji}` : ''
+      systemMessage(`thanks for the ${payload.method}!${premiumText}`)
     },
     'command-password-ok': payload => {
       systemMessage('changed password successfully')
@@ -300,14 +307,29 @@ document.addEventListener('DOMContentLoaded', () => {
       systemMessage('only named users can upload an avatar. use /name to name yourself')
     },
     'command-daily-ok': payload => {
-      const premiumText = payload.premiumCurrency > 0 ? ' +<b>' + payload.premiumCurrency + '</b>' + premiumCurrencyEmoji : ''
-      systemMessage(`+<b>${payload.currency}</b>${currencyEmoji} (2x sub bonus)${premiumText} | next daily: ${formatTimeDelta(payload.time)}`)
+      const premiumText = payload.premiumCurrency > 0 ? ` +<b>${payload.premiumCurrency}</b>${premiumCurrencyEmoji}` : ''
+      const subText = payload.sub ? ' (sub bonus)' : ''
+      systemMessage(`+<b>${payload.currency}</b>${currencyEmoji}${premiumText}${subText} | next daily in ${formatTimeDelta(payload.time)}`)
     },
     'command-daily-fail': payload => {
-      systemMessage(`next daily: ${formatTimeDelta(payload.time)}`)
+      systemMessage(`next daily in ${formatTimeDelta(payload.time)}`)
     },
     'command-daily-auth-required': payload => {
       systemMessage('only named users can claim daily currency. use /name to name yourself')
+    },
+    'command-stats-ok': payload => {
+      switch (payload.view) {
+        case 'bal':
+          const currency = payload.currency || 0
+          const currencyStr = currency > 1 ? `${currencyEmoji} ${currencyName}s` : `${currencyEmoji} ${currencyName}`
+          const premiumCurrency = payload.premiumCurrency || 0
+          const premiumCurrencyStr = premiumCurrency > 1 ? `${premiumCurrencyEmoji} ${premiumCurrencyName}s` : `${premiumCurrencyEmoji} ${premiumCurrencyName}`
+          systemMessage(`<b>${currency}</b>${currencyStr}, <b>${premiumCurrency}</b>${premiumCurrencyStr}`)
+          break
+      }
+    },
+    'command-stats-auth-required': payload => {
+      systemMessage('only named users can view Petal stats. use /name to name yourself')
     },
   }
 
@@ -571,6 +593,18 @@ document.addEventListener('DOMContentLoaded', () => {
         return 1
       } else {
         payloadHandlers['command-daily-auth-required']()
+        return 1
+      }
+    },
+    bal: args => {
+      if (userData.token !== undefined) {
+        send({
+          type: 'command-stats',
+          view: 'bal',
+        })
+        return 1
+      } else {
+        payloadHandlers['command-stats-auth-required']()
         return 1
       }
     }
