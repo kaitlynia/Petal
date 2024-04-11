@@ -283,7 +283,7 @@ const authToken = (sock, token, name, newName=false) => {
       bgColor: sock.bgColor,
       hasAvatar: data.nameAvatar[sock.name] !== undefined,
       stats: data.tokenStats[sock.token] || {},
-      kofi: aggregateKofiData(data.tokenKofi[sock.token]),
+      kofi: aggregateKofiData(sock.token),
       history: getHistory(),
       participants: getParticipants()
     }))
@@ -364,7 +364,7 @@ const payloadHandlers = {
             bgColor: sock.bgColor,
             hasAvatar: data.nameAvatar[sock.name] !== undefined,
             stats: data.tokenStats[sock.token] || {},
-            kofi: aggregateKofiData(data.tokenKofi[sock.token]),
+            kofi: aggregateKofiData(sock.token),
             history: getHistory(),
             participants: getParticipants()
           })
@@ -787,7 +787,7 @@ const payloadHandlers = {
       sockSend(sock, {
         type: 'command-stats-ok',
         stats: data.tokenStats[sock.token] || {},
-        kofi: aggregateKofiData(data.tokenKofi[sock.token]),
+        kofi: aggregateKofiData(sock.token),
         view: payload.view || 'stats'
       })
     } else {
