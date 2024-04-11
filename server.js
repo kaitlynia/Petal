@@ -127,12 +127,19 @@ const updateDailyRevenue = (isSub, amount) => {
   data.dailyRevenue[dateKey] = (data.dailyRevenue[dateKey] || 0) + amount
 }
 
+const isTokenSubscribed = token => {
+  return token === data.broadcaster || Date.now() < data.kofiSubTime[data.tokenKofi[token]]
+}
+const isKofiSubscribed = kofi => {
+  return data.kofiToken[kofi] === data.broadcaster || Date.now() < data.kofiSubTime[kofi]
+}
+
 const aggregateKofiData = kofi => {
   // TODO: condense kofi data into a single object
   // (large implications including re-test of integration)
   if (kofi === undefined) {
     return {
-      subStatus: false,
+      subStatus: isKofiSubscribed(kofi),
       subTime: 0,
       subStreak: 0,
       monthsSubbed: 0,
@@ -168,13 +175,6 @@ const awardPremiumUsingTotal = (token, total) => {
     premiumCurrencyEarned: currencyEarned + award
   })
   return award
-}
-
-const isTokenSubscribed = token => {
-  return token === data.broadcaster || Date.now() < data.kofiSubTime[data.tokenKofi[token]]
-}
-const isKofiSubscribed = kofi => {
-  return data.kofiToken[kofi] === data.broadcaster || Date.now() < data.kofiSubTime[kofi]
 }
 
 const timeUntilNextDay = time => {
