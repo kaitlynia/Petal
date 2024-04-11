@@ -691,14 +691,14 @@ const payloadHandlers = {
   },
   'command-colors': (sock, payload) => {
     if (!hasPetalPlus(sock.token) && (payload.textColor !== defaultTextColor || payload.bgColor !== defaultBgColor)) {
-      sockSend(sock, {
+      return sockSend(sock, {
         type: 'command-colors-sub-required',
         view: payload.view,
       })
     }
 
     if (![payload.nameColor, payload.textColor, payload.bgColor].every(c => validHexColor(c))) {
-      sockSend(sock, {
+      return sockSend(sock, {
         type: 'command-colors-invalid',
         view: payload.view,
       })
@@ -708,9 +708,9 @@ const payloadHandlers = {
     if (name.good) {
       const message = textBackgroundContrast(payload.textColor, payload.bgColor)
       if (message.good) {
-        data.nameColor = payload.nameColor
-        data.nameTextColor = payload.textColor
-        data.nameBgColor = payload.bgColor
+        data.nameColor[sock.name] = payload.nameColor
+        data.nameTextColor[sock.name] = payload.textColor
+        data.nameBgColor[sock.name] = payload.bgColor
         saveData()
 
         sockSend(sock, {
