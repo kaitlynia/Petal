@@ -76,6 +76,46 @@ if (fs.existsSync(dataPath)) {
   data = JSON.parse(fs.readFileSync(dataPath, 'utf8'))
 }
 
+const luminance = hex => {
+  a = hh => {
+    v = parseInt(hh, 16) / 255
+    return v <= 0.03928
+      ? v / 12.92
+      : Math.pow((v + 0.055) / 1.055, 2.4)
+  }
+  return a(hex.slice(1,3)) * 0.2126 + a(hex.slice(3,5)) * 0.7152 + a(hex.slice(5,7)) * 0.0722
+}
+
+const rgbToHex = rgb => {
+  if (rgb.charAt(0) === '#') return rgb
+  return '#' + rgb.replace('rgb(', '').replace(')', '').split(',').map(s => ('0'+Number(s).toString(16)).slice(-2)).join('')
+}
+
+const textBackgroundContrast = (text, background) => {
+  if (text === background) {
+    return {good: false, ratio: 1, reason: 'Text and background are the same color'}
+  }
+  const lum1 = luminance(text)
+  const lum2 = luminance(background)
+  const ratio = (Math.max(lum1, lum2) + 0.05) / (Math.min(lum1, lum2) + 0.05)
+
+  if (ratio >= 4.5) {
+    return {good: true, ratio: ratio, reason: 'good'}
+  } else if (lum1 > lum2) {
+    if (lum1 / 2 < 0.5) {
+      return {good: false, ratio: ratio, reason: 'Text color is too dark'}
+    } else {
+      return {good: false, ratio: ratio, reason: 'Background color is too light'}
+    }
+  } else {
+    if (lum2 / 2 < 0.5) {
+      return {good: false, ratio: ratio, reason: 'Background color is too dark'}
+    } else {
+      return {good: false, ratio: ratio, reason: 'Text color is too light'}
+    }
+  }
+}
+
 const updateDailyRevenue = (isSub, amount) => {
   const date = new Date()
   const dateKey = `${date.getUTCFullYear()}-${('0'+date.getUTCMonth()).slice(-2)}-${('0'+date.getUTCDate()).slice(-2)}`
@@ -92,6 +132,7 @@ const aggregateKofiData = kofi => {
   // (large implications including re-test of integration)
   if (kofi === undefined) {
     return {
+      subStatus: false,
       subTime: 0,
       subStreak: 0,
       monthsSubbed: 0,
@@ -101,6 +142,7 @@ const aggregateKofiData = kofi => {
     }
   } else {
     return {
+      subStatus: isKofiSubscribed(kofi),
       subTime: kofiSubTime[kofi] || 0,
       subStreak: kofiSubStreak[kofi] || 0,
       monthsSubbed: kofiMonthsSubbed[kofi] || 0,
@@ -128,8 +170,11 @@ const awardPremiumUsingTotal = (token, total) => {
   return award
 }
 
-const isSubscribed = token => {
+const isTokenSubscribed = token => {
   return token === data.broadcaster || Date.now() < data.kofiSubTime[data.tokenKofi[token]]
+}
+const isKofiSubscribed = kofi => {
+  return data.kofiToken[kofi] === data.broadcaster || Date.now() < data.kofiSubTime[kofi]
 }
 
 const timeUntilNextDay = time => {
@@ -220,7 +265,7 @@ const authToken = (sock, token, name, newName=false) => {
     sock.token = token
     sock.name = name
     sock.nameColor = data.nameColor[name] || defaultNameColor
-    if (isSubscribed(token)) {
+    if (isTokenSubscribed(token)) {
       sock.textColor = data.nameTextColor[name] || defaultTextColor
       sock.bgColor = data.nameBgColor[name] || defaultBgColor
     } else {
@@ -239,7 +284,6 @@ const authToken = (sock, token, name, newName=false) => {
       textColor: sock.textColor,
       bgColor: sock.bgColor,
       hasAvatar: data.nameAvatar[sock.name] !== undefined,
-      sub: isSubscribed(sock.token),
       stats: data.tokenStats[sock.token] || {},
       kofi: aggregateKofiData(data.tokenKofi[sock.token]),
       history: getHistory(),
@@ -306,7 +350,7 @@ const payloadHandlers = {
           sock.token = token
           sock.name = payload.name
           sock.nameColor = data.nameColor[sock.name] || defaultNameColor
-          if (isSubscribed(token)) {
+          if (isTokenSubscribed(token)) {
             sock.textColor = data.nameTextColor[sock.name] || defaultTextColor
             sock.bgColor = data.nameBgColor[sock.name] || defaultBgColor
           } else {
@@ -321,7 +365,6 @@ const payloadHandlers = {
             textColor: sock.textColor,
             bgColor: sock.bgColor,
             hasAvatar: data.nameAvatar[sock.name] !== undefined,
-            sub: isSubscribed(sock.token),
             stats: data.tokenStats[sock.token] || {},
             kofi: aggregateKofiData(data.tokenKofi[sock.token]),
             history: getHistory(),
@@ -392,7 +435,7 @@ const payloadHandlers = {
       const user = [...socks].find(s => s.name === payload.name)
       if (user !== undefined) {
         const body = sanitize(payload.body)
-        if (isSubscribed(sock.token)) {
+        if (isTokenSubscribed(sock.token)) {
           sock.textColor = data.nameTextColor[sock.name] || defaultTextColor
           sock.bgColor = data.nameBgColor[sock.name] || defaultBgColor
         } else {
@@ -429,7 +472,7 @@ const payloadHandlers = {
 
       if (cleanBody.length > maxMessageLength) return
 
-      if (isSubscribed(sock.token)) {
+      if (isTokenSubscribed(sock.token)) {
         sock.textColor = data.nameTextColor[sock.name] || defaultTextColor
         sock.bgColor = data.nameBgColor[sock.name] || defaultBgColor
       } else {
@@ -534,7 +577,7 @@ const payloadHandlers = {
 
       sockSend(sock, {
         type: 'command-kofi-ok',
-        sub: isSubscribed(sock.token),
+        sub: isTokenSubscribed(sock.token),
         premiumCurrency: award,
       })
     } else {
@@ -570,12 +613,14 @@ const payloadHandlers = {
           })
         } else {
           sockSend(sock, {
-            type: 'command-color-invalid'
+            type: 'command-colors-invalid',
+            view: 'command',
           })
         }
       } else {
         sockSend(sock, {
-          type: 'command-color-auth-required'
+          type: 'command-colors-auth-required',
+          view: 'command',
         })
       }
     }
@@ -583,7 +628,7 @@ const payloadHandlers = {
   'command-textcolor': (sock, payload) => {
     if (payload.hasOwnProperty('color')) {
       if (sock.token !== undefined) {
-        if (isSubscribed(sock.token)) {
+        if (isTokenSubscribed(sock.token)) {
           if (validHexColor(payload.color)) {
             sock.textColor = payload.color
             data.nameTextColor[sock.name] = sock.textColor
@@ -595,17 +640,20 @@ const payloadHandlers = {
             })
           } else {
             sockSend(sock, {
-              type: 'command-color-invalid'
+              type: 'command-colors-invalid',
+              view: 'command',
             })
           }
         } else {
           sockSend(sock, {
-            type: 'command-color-sub-required'
+            type: 'command-colors-sub-required',
+            view: 'command',
           })
         }
       } else {
         sockSend(sock, {
-          type: 'command-color-auth-required'
+          type: 'command-colors-auth-required',
+          view: 'command',
         })
       }
     }
@@ -613,7 +661,7 @@ const payloadHandlers = {
   'command-bgcolor': (sock, payload) => {
     if (payload.hasOwnProperty('color')) {
       if (sock.token !== undefined) {
-        if (isSubscribed(sock.token)) {
+        if (isTokenSubscribed(sock.token)) {
           if (validHexColor(payload.color)) {
             sock.bgColor = payload.color
             data.nameBgColor[sock.name] = sock.bgColor
@@ -625,19 +673,68 @@ const payloadHandlers = {
             })
           } else {
             sockSend(sock, {
-              type: 'command-color-invalid'
+              type: 'command-colors-invalid',
+              view: 'command',
             })
           }
         } else {
           sockSend(sock, {
-            type: 'command-color-sub-required'
+            type: 'command-colors-sub-required',
+            view: 'command',
           })
         }
       } else {
         sockSend(sock, {
-          type: 'command-color-auth-required'
+          type: 'command-colors-auth-required',
+          view: 'command',
         })
       }
+    }
+  },
+  'command-colors': (sock, payload) => {
+    if (!isTokenSubscribed(sock.token) && (payload.textColor !== defaultTextColor || payload.bgColor !== defaultBgColor)) {
+      return {
+        type: 'command-color-sub-required',
+        view: payload.view,
+      }
+    }
+
+    if (![payload.nameColor, payload.textColor, payload.bgColor].every(c => validHexColor(c))) {
+      return {
+        type: 'command-color-invalid',
+        view: payload.view,
+      }
+    }
+
+    const name = textBackgroundContrast(payload.nameColor, payload.bgColor)
+    if (name.good) {
+      const message = textBackgroundContrast(payload.textColor, payload.bgColor)
+      if (message.good) {
+        data.nameColor = payload.nameColor
+        data.nameTextColor = payload.textColor
+        data.nameBgColor = payload.bgColor
+        saveData()
+
+        sockSend(sock, {
+          type: 'command-colors-ok',
+          nameColor: payload.nameColor,
+          textColor: payload.textColor,
+          bgColor: payload.bgColor,
+          view: payload.view,
+        })
+      } else {
+        sockSend(sock, {
+          type: 'command-colors-fail',
+          reason: message.reason.replace('Text', 'Message'),
+          view: payload.view,
+        })
+      }
+    } else {
+      sockSend(sock, {
+        type: 'command-colors-fail',
+        reason: name.reason.replace('Text', 'Name'),
+        view: payload.view,
+      })
     }
   },
   'command-daily': (sock, payload) => {
@@ -649,7 +746,7 @@ const payloadHandlers = {
       const delta = timeUntilNextDay(stats.dailyTime || 0)
 
       if (delta <= 0) {
-        const sub = isSubscribed(sock.token)
+        const sub = isTokenSubscribed(sock.token)
         const min = sub ? dailyCurrencySubMin : dailyCurrencyMin
         const max = sub ? dailyCurrencySubMax : dailyCurrencyMax
         const currency = ~~(Math.random() * (max - min) + min)
