@@ -692,14 +692,14 @@ const payloadHandlers = {
   'command-colors': (sock, payload) => {
     if (!hasPetalPlus(sock.token) && (payload.textColor !== defaultTextColor || payload.bgColor !== defaultBgColor)) {
       sockSend(sock, {
-        type: 'command-color-sub-required',
+        type: 'command-colors-sub-required',
         view: payload.view,
       })
     }
 
     if (![payload.nameColor, payload.textColor, payload.bgColor].every(c => validHexColor(c))) {
       sockSend(sock, {
-        type: 'command-color-invalid',
+        type: 'command-colors-invalid',
         view: payload.view,
       })
     }
