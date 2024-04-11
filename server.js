@@ -127,19 +127,17 @@ const updateDailyRevenue = (isSub, amount) => {
   data.dailyRevenue[dateKey] = (data.dailyRevenue[dateKey] || 0) + amount
 }
 
-const isTokenSubscribed = token => {
+const hasPetalPlus = token => {
   return token === data.broadcaster || Date.now() < data.kofiSubTime[data.tokenKofi[token]]
 }
-const isKofiSubscribed = kofi => {
-  return data.kofiToken[kofi] === data.broadcaster || Date.now() < data.kofiSubTime[kofi]
-}
 
-const aggregateKofiData = kofi => {
+const aggregateKofiData = token => {
   // TODO: condense kofi data into a single object
   // (large implications including re-test of integration)
+  const kofi = data.tokenKofi[token]
   if (kofi === undefined) {
     return {
-      subStatus: isKofiSubscribed(kofi),
+      subStatus: hasPetalPlus(token),
       subTime: 0,
       subStreak: 0,
       monthsSubbed: 0,
@@ -149,7 +147,7 @@ const aggregateKofiData = kofi => {
     }
   } else {
     return {
-      subStatus: isKofiSubscribed(kofi),
+      subStatus: hasPetalPlus(token),
       subTime: kofiSubTime[kofi] || 0,
       subStreak: kofiSubStreak[kofi] || 0,
       monthsSubbed: kofiMonthsSubbed[kofi] || 0,
@@ -265,7 +263,7 @@ const authToken = (sock, token, name, newName=false) => {
     sock.token = token
     sock.name = name
     sock.nameColor = data.nameColor[name] || defaultNameColor
-    if (isTokenSubscribed(token)) {
+    if (hasPetalPlus(token)) {
       sock.textColor = data.nameTextColor[name] || defaultTextColor
       sock.bgColor = data.nameBgColor[name] || defaultBgColor
     } else {
@@ -350,7 +348,7 @@ const payloadHandlers = {
           sock.token = token
           sock.name = payload.name
           sock.nameColor = data.nameColor[sock.name] || defaultNameColor
-          if (isTokenSubscribed(token)) {
+          if (hasPetalPlus(token)) {
             sock.textColor = data.nameTextColor[sock.name] || defaultTextColor
             sock.bgColor = data.nameBgColor[sock.name] || defaultBgColor
           } else {
@@ -435,7 +433,7 @@ const payloadHandlers = {
       const user = [...socks].find(s => s.name === payload.name)
       if (user !== undefined) {
         const body = sanitize(payload.body)
-        if (isTokenSubscribed(sock.token)) {
+        if (hasPetalPlus(sock.token)) {
           sock.textColor = data.nameTextColor[sock.name] || defaultTextColor
           sock.bgColor = data.nameBgColor[sock.name] || defaultBgColor
         } else {
@@ -472,7 +470,7 @@ const payloadHandlers = {
 
       if (cleanBody.length > maxMessageLength) return
 
-      if (isTokenSubscribed(sock.token)) {
+      if (hasPetalPlus(sock.token)) {
         sock.textColor = data.nameTextColor[sock.name] || defaultTextColor
         sock.bgColor = data.nameBgColor[sock.name] || defaultBgColor
       } else {
@@ -577,7 +575,7 @@ const payloadHandlers = {
 
       sockSend(sock, {
         type: 'command-kofi-ok',
-        sub: isTokenSubscribed(sock.token),
+        sub: hasPetalPlus(sock.token),
         premiumCurrency: award,
       })
     } else {
@@ -628,7 +626,7 @@ const payloadHandlers = {
   'command-textcolor': (sock, payload) => {
     if (payload.hasOwnProperty('color')) {
       if (sock.token !== undefined) {
-        if (isTokenSubscribed(sock.token)) {
+        if (hasPetalPlus(sock.token)) {
           if (validHexColor(payload.color)) {
             sock.textColor = payload.color
             data.nameTextColor[sock.name] = sock.textColor
@@ -661,7 +659,7 @@ const payloadHandlers = {
   'command-bgcolor': (sock, payload) => {
     if (payload.hasOwnProperty('color')) {
       if (sock.token !== undefined) {
-        if (isTokenSubscribed(sock.token)) {
+        if (hasPetalPlus(sock.token)) {
           if (validHexColor(payload.color)) {
             sock.bgColor = payload.color
             data.nameBgColor[sock.name] = sock.bgColor
@@ -692,7 +690,7 @@ const payloadHandlers = {
     }
   },
   'command-colors': (sock, payload) => {
-    if (!isTokenSubscribed(sock.token) && (payload.textColor !== defaultTextColor || payload.bgColor !== defaultBgColor)) {
+    if (!hasPetalPlus(sock.token) && (payload.textColor !== defaultTextColor || payload.bgColor !== defaultBgColor)) {
       return {
         type: 'command-color-sub-required',
         view: payload.view,
@@ -746,7 +744,7 @@ const payloadHandlers = {
       const delta = timeUntilNextDay(stats.dailyTime || 0)
 
       if (delta <= 0) {
-        const sub = isTokenSubscribed(sock.token)
+        const sub = hasPetalPlus(sock.token)
         const min = sub ? dailyCurrencySubMin : dailyCurrencyMin
         const max = sub ? dailyCurrencySubMax : dailyCurrencyMax
         const currency = ~~(Math.random() * (max - min) + min)
