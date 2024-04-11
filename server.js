@@ -87,6 +87,30 @@ const updateDailyRevenue = (isSub, amount) => {
   data.dailyRevenue[dateKey] = (data.dailyRevenue[dateKey] || 0) + amount
 }
 
+const aggregateKofiData = kofi => {
+  // TODO: condense kofi data into a single object
+  // (large implications including re-test of integration)
+  if (kofi === undefined) {
+    return {
+      subTime: 0,
+      subStreak: 0,
+      monthsSubbed: 0,
+      subsTotal: 0,
+      donations: 0,
+      total: 0,
+    }
+  } else {
+    return {
+      subTime: kofiSubTime[kofi] || 0,
+      subStreak: kofiSubStreak[kofi] || 0,
+      monthsSubbed: kofiMonthsSubbed[kofi] || 0,
+      subsTotal: kofiSubsTotal[kofi] || 0,
+      donations: kofiDonations[kofi] || 0,
+      total: kofiTotal[kofi] || 0,
+    }
+  }
+}
+
 const awardPremiumUsingTotal = (token, total) => {
   if (data.tokenStats[token] === undefined) {
     data.tokenStats[token] = {}
@@ -214,6 +238,8 @@ const authToken = (sock, token, name, newName=false) => {
       nameColor: sock.nameColor,
       textColor: sock.textColor,
       bgColor: sock.bgColor,
+      stats: data.tokenStats[sock.token] || {},
+      kofi: aggregateKofiData(data.tokenKofi[sock.token]),
       history: getHistory(),
       participants: getParticipants()
     }))
@@ -292,6 +318,8 @@ const payloadHandlers = {
             nameColor: sock.nameColor,
             textColor: sock.textColor,
             bgColor: sock.bgColor,
+            stats: data.tokenStats[sock.token] || {},
+            kofi: aggregateKofiData(data.tokenKofi[sock.token]),
             history: getHistory(),
             participants: getParticipants()
           })
@@ -660,6 +688,7 @@ const payloadHandlers = {
       sockSend(sock, {
         type: 'command-stats-ok',
         stats: data.tokenStats[sock.token] || {},
+        kofi: aggregateKofiData(data.tokenKofi[sock.token]),
         view: payload.view || 'stats'
       })
     } else {
