@@ -691,17 +691,17 @@ const payloadHandlers = {
   },
   'command-colors': (sock, payload) => {
     if (!hasPetalPlus(sock.token) && (payload.textColor !== defaultTextColor || payload.bgColor !== defaultBgColor)) {
-      return {
+      sockSend(sock, {
         type: 'command-color-sub-required',
         view: payload.view,
-      }
+      })
     }
 
     if (![payload.nameColor, payload.textColor, payload.bgColor].every(c => validHexColor(c))) {
-      return {
+      sockSend(sock, {
         type: 'command-color-invalid',
         view: payload.view,
-      }
+      })
     }
 
     const name = textBackgroundContrast(payload.nameColor, payload.bgColor)
