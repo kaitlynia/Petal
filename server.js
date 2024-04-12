@@ -754,14 +754,20 @@ const payloadHandlers = {
           delete data.nameToken[sock.name]
           data.nameToken[payload.name] = sock.token
           data.tokenNames[sock.token] = [...data.tokenNames[sock.token].filter(n => n !== sock.name), payload.name]
-          fs.rename(`/var/www/html/avatars/${sock.name}.png`, `/var/www/html/avatars/${payload.name}.png`, err => {
-            if (err) {
-              sockSend(sock, {
-                type: 'avatar-upload-fail',
-                reason: err.toString()
-              })
-            }
-          })
+          if (data.nameAvatar[sock.name] === true) {
+            fs.rename(`/var/www/html/avatars/${sock.name}.png`, `/var/www/html/avatars/${payload.name}.png`, err => {
+              if (err) {
+                sockSend(sock, {
+                  type: 'avatar-upload-fail',
+                  reason: err.toString()
+                })
+              }
+            })
+            data.nameAvatar[payload.name] === true
+          } else {
+            data.nameAvatar[payload.name] === false
+          }
+          delete data.nameAvatar[sock.name]
           delete data.nameColor[sock.name]
           data.nameColor[payload.name] = payload.nameColor
           delete data.nameTextColor[sock.name]
