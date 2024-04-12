@@ -15,8 +15,8 @@ sanitizeConfig = {
   ALLOWED_ATTR: ['href', 'target', 'rel']
 },
 sanitize = s => DOMPurify.sanitize(s, sanitizeConfig),
-validName = s => !/[^0-9a-z]/i.test(s),
-validHexColor = s => /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(s),
+validName = s => s.length > 0 && !/[^0-9a-z]/i.test(s),
+validHexColor = s => s.length === 7 && /#[0-9a-f]{6}/i.test(s),
 
 defaultNameColor = '#aaaaaa',
 defaultTextColor = '#ffffff',
@@ -292,6 +292,54 @@ const authToken = (sock, token, name, newName=false) => {
     sock.send(JSON.stringify({
       type: 'auth-fail-unauthorized'
     }))
+  }
+}
+
+const handleColorsPayload = (sock, payload) => {
+  if (!hasPetalPlus(sock.token) && (payload.textColor !== defaultTextColor || payload.bgColor !== defaultBgColor)) {
+    sockSend(sock, {
+      type: 'command-profile-sub-required',
+      view: payload.view,
+    })
+    return false
+  }
+
+  if (![payload.nameColor, payload.textColor, payload.bgColor].every(c => validHexColor(c))) {
+    sockSend(sock, {
+      type: 'command-colors-invalid',
+      view: payload.view,
+    })
+    return false
+  }
+
+  const name = textBackgroundContrast(payload.nameColor, payload.bgColor)
+  if (name.good) {
+    const message = textBackgroundContrast(payload.textColor, payload.bgColor)
+    if (message.good) {
+      sockSend(sock, {
+        type: 'command-profile-ok',
+        name: payload.name || sock.name,
+        nameColor: payload.nameColor,
+        textColor: payload.textColor,
+        bgColor: payload.bgColor,
+        view: payload.view,
+      })
+      return true
+    } else {
+      sockSend(sock, {
+        type: 'command-colors-fail',
+        reason: message.reason.replace('Text', 'Message'),
+        view: payload.view,
+      })
+      return false
+    }
+  } else {
+    sockSend(sock, {
+      type: 'command-colors-fail',
+      reason: name.reason.replace('Text', 'Name'),
+      view: payload.view,
+    })
+    return false
   }
 }
 
@@ -690,48 +738,35 @@ const payloadHandlers = {
     }
   },
   'command-colors': (sock, payload) => {
-    if (!hasPetalPlus(sock.token) && (payload.textColor !== defaultTextColor || payload.bgColor !== defaultBgColor)) {
-      return sockSend(sock, {
-        type: 'command-colors-sub-required',
-        view: payload.view,
-      })
+    const valid = handleColorsPayload(sock, payload)
+    if (valid) {
+      data.nameColor[sock.name] = payload.nameColor
+      data.nameTextColor[sock.name] = payload.textColor
+      data.nameBgColor[sock.name] = payload.bgColor
+      saveData()
     }
-
-    if (![payload.nameColor, payload.textColor, payload.bgColor].every(c => validHexColor(c))) {
-      return sockSend(sock, {
-        type: 'command-colors-invalid',
-        view: payload.view,
-      })
-    }
-
-    const name = textBackgroundContrast(payload.nameColor, payload.bgColor)
-    if (name.good) {
-      const message = textBackgroundContrast(payload.textColor, payload.bgColor)
-      if (message.good) {
-        data.nameColor[sock.name] = payload.nameColor
-        data.nameTextColor[sock.name] = payload.textColor
-        data.nameBgColor[sock.name] = payload.bgColor
-        saveData()
-
-        sockSend(sock, {
-          type: 'command-colors-ok',
-          nameColor: payload.nameColor,
-          textColor: payload.textColor,
-          bgColor: payload.bgColor,
-          view: payload.view,
-        })
+  },
+  'command-profile': (sock, payload) => {
+    if (sock.token !== undefined) {
+      if (payload.name !== undefined && validName(payload.name)) {
+        const valid = handleColorsPayload(sock, payload)
+        if (valid) {
+          delete data.nameToken[sock.name]
+          data.nameToken[payload.name] = sock.token
+          data.tokenNames[sock.token] = [...data.tokenNames[sock.token].filter(n => n !== sock.name), payload.name]
+          data.nameColor[sock.name] = payload.nameColor
+          data.nameTextColor[sock.name] = payload.textColor
+          data.nameBgColor[sock.name] = payload.bgColor
+          saveData()
+        }
       } else {
         sockSend(sock, {
-          type: 'command-colors-fail',
-          reason: message.reason.replace('Text', 'Message'),
-          view: payload.view,
+          type: 'command-name-invalid'
         })
       }
     } else {
       sockSend(sock, {
-        type: 'command-colors-fail',
-        reason: name.reason.replace('Text', 'Name'),
-        view: payload.view,
+        type: 'command-profile-auth-required'
       })
     }
   },
