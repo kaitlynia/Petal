@@ -754,9 +754,14 @@ const payloadHandlers = {
           delete data.nameToken[sock.name]
           data.nameToken[payload.name] = sock.token
           data.tokenNames[sock.token] = [...data.tokenNames[sock.token].filter(n => n !== sock.name), payload.name]
-          data.nameColor[sock.name] = payload.nameColor
-          data.nameTextColor[sock.name] = payload.textColor
-          data.nameBgColor[sock.name] = payload.bgColor
+          fs.rename(`/var/www/html/avatars/${sock.name}.png`, `/var/www/html/avatars/${payload.name}.png`)
+          delete data.nameColor[sock.name]
+          data.nameColor[payload.name] = payload.nameColor
+          delete data.nameTextColor[sock.name]
+          data.nameTextColor[payload.name] = payload.textColor
+          delete data.nameBgColor[sock.name]
+          data.nameBgColor[payload.name] = payload.bgColor
+          sock.name = payload.name
           saveData()
         }
       } else {
