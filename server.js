@@ -765,11 +765,13 @@ const payloadHandlers = {
       if (payload.name !== undefined && validName(payload.name)) {
         const valid = handleColorsPayload(sock, payload)
         if (valid) {
-          delete data.nameToken[sock.name]
-          data.nameToken[payload.name] = sock.token
-          data.tokenNames[sock.token] = [...data.tokenNames[sock.token].filter(n => n !== sock.name), payload.name]
-          data.nameAvatar[payload.name] = data.nameAvatar[sock.name] || 'anon.png'
-          delete data.nameAvatar[sock.name]
+          if (payload.name !== sock.name) {
+            delete data.nameToken[sock.name]
+            data.nameToken[payload.name] = sock.token
+            data.tokenNames[sock.token] = [...data.tokenNames[sock.token].filter(n => n !== sock.name), payload.name]
+            data.nameAvatar[payload.name] = data.nameAvatar[sock.name] || 'anon.png'
+            delete data.nameAvatar[sock.name]
+          }
           delete data.nameColor[sock.name]
           sock.nameColor = data.nameColor[payload.name] = payload.nameColor
           delete data.nameTextColor[sock.name]
@@ -777,7 +779,6 @@ const payloadHandlers = {
           delete data.nameBgColor[sock.name]
           sock.bgColor = data.nameBgColor[payload.name] = payload.bgColor
           sock.name = payload.name
-
 
           if (sock.name !== payload.name) {
             data.messageHistory.forEach((message, index) => {
@@ -876,7 +877,7 @@ const payloadHandlers = {
   },
   'command-data': (sock, payload) => {
     if (sock.token === data.broadcaster) {
-      if (payload.data) {
+      if (payload.data !== '') {
         sockSend(sock, {
           type: 'command-data-ok',
           data: data[payload.data]
