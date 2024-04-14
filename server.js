@@ -596,7 +596,8 @@ const payloadHandlers = {
       const existingToken = data.kofiToken[newKofi]
       if (existingToken !== undefined && sock.token !== existingToken) {
         return sockSend(sock, {
-          type: 'command-kofi-auth-fail'
+          type: 'command-kofi-auth-fail',
+          view: payload.view,
         })
       }
       const currentKofi = data.tokenKofi[sock.token]
@@ -648,12 +649,15 @@ const payloadHandlers = {
 
       sockSend(sock, {
         type: 'command-kofi-ok',
-        sub: hasPetalPlus(sock.token),
-        premiumCurrency: award,
+        stats: data.tokenStats[sock.token] || {},
+        kofi: aggregateKofiData(sock.token),
+        award: award,
+        view: payload.view,
       })
     } else {
       sockSend(sock, {
-        type: 'command-kofi-auth-required'
+        type: 'command-kofi-auth-required',
+        view: payload.view,
       })
     }
   },
