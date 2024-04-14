@@ -799,9 +799,9 @@ const payloadHandlers = {
             sock.name = payload.name
 
             if (sock.name !== payload.name) {
-              data.messageHistory.forEach((message, index) => {
+              data.messageHistory.forEach(message => {
                 if (sock.name === message.name) {
-                  data.messageHistory[index] = {id: message.id, name: payload.name, body: message.body}
+                  message.name = payload.name
                 }
               })
             }
@@ -896,9 +896,9 @@ const payloadHandlers = {
   },
   'command-delete-message': (sock, payload) => {
     if (isModerator(sock.token) && payload.id !== undefined) {
-      data.messageHistory.forEach((message, index) => {
+      data.messageHistory.forEach(message => {
         if (payload.id === message.id) {
-          data.messageHistory[index] = {id: message.id, name: message.name, body: '<message deleted>'}
+          message.body = '<message deleted>'
         }
       })
       saveData()
