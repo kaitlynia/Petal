@@ -364,6 +364,7 @@ const getHistory = () => {
   return rawHistory.map(message => {
     const token = data.nameToken[message.name]
     return {
+      id: message.id,
       avatar: data.nameAvatar[message.name] || 'anon.png',
       name: message.name,
       nameColor: data.nameColor[message.name] || defaultNameColor,
