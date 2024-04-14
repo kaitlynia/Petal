@@ -285,7 +285,7 @@ const authToken = (sock, token, name, newName=false) => {
       names.push(sock.name)
       saveData()
     }
-    sock.send(JSON.stringify({
+    sockSend(sock, {
       type: 'auth-ok',
       name: sock.name,
       nameColor: sock.nameColor,
@@ -296,7 +296,7 @@ const authToken = (sock, token, name, newName=false) => {
       kofi: aggregateKofiData(sock.token),
       history: getHistory(),
       participants: getParticipants()
-    }))
+    })
     updateParticipants(sock, action)
   } else {
     sock.send(JSON.stringify({
@@ -326,15 +326,6 @@ const handleColorsPayload = (sock, payload) => {
   if (name.good) {
     const message = textBackgroundContrast(payload.textColor, payload.bgColor)
     if (message.good) {
-      sockSend(sock, {
-        type: 'command-profile-ok',
-        avatar: data.nameAvatar[sock.name] || 'anon.png',
-        name: payload.name || sock.name,
-        nameColor: payload.nameColor,
-        textColor: payload.textColor,
-        bgColor: payload.bgColor,
-        view: payload.view,
-      })
       return true
     } else {
       sockSend(sock, {
@@ -796,13 +787,18 @@ const payloadHandlers = {
             })
           }
 
-          sock.name = payload.name
-          saveData()
-        } else {
           sockSend(sock, {
-            type: 'command-colors-invalid',
+            type: 'command-profile-ok',
+            avatar: data.nameAvatar[payload.name] || 'anon.png',
+            name: payload.name,
+            nameColor: payload.nameColor,
+            textColor: payload.textColor,
+            bgColor: payload.bgColor,
             view: payload.view,
           })
+
+          sock.name = payload.name
+          saveData()
         }
       } else {
         sockSend(sock, {
@@ -878,6 +874,25 @@ const payloadHandlers = {
       })
     }
   },
+  'command-data': (sock, payload) => {
+    if (sock.token === data.broadcaster) {
+      if (args) {
+        sockSend(sock, {
+          type: 'command-data-ok',
+          data: data[args]
+        })
+      } else {
+        sockSend(sock, {
+          type: 'command-data-ok',
+          data: data
+        })
+      }
+    } else {
+      sockSend(sock, {
+        type: 'command-data-unauthorized'
+      })
+    }
+  }
 }
 
 wss.on('connection', sock => {
