@@ -776,7 +776,7 @@ const payloadHandlers = {
           delete data.nameToken[sock.name]
           data.nameToken[payload.name] = sock.token
           data.tokenNames[sock.token] = [...data.tokenNames[sock.token].filter(n => n !== sock.name), payload.name]
-          data.nameAvatar[payload.name] = data.nameAvatar[sock.name] || 'anon.png'
+          const avatar = data.nameAvatar[payload.name] = data.nameAvatar[sock.name] || 'anon.png'
           delete data.nameAvatar[sock.name]
           delete data.nameColor[sock.name]
           sock.nameColor = data.nameColor[payload.name] = payload.nameColor
