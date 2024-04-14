@@ -23,6 +23,7 @@ defaultTextColor = '#ffffff',
 defaultBgColor = '#202020',
 maxMessageLength = 500,
 maxMessageHistory = 50,
+maxMessageLookup = 1000,
 socks = new Set(),
 
 dailyCurrencyMin = 50,
@@ -33,6 +34,8 @@ dailyCurrencySubRatio = (dailyCurrencySubMin + dailyCurrencySubMax) / (dailyCurr
 dailyPremiumChance = 0.1,
 dailyPremiumSubChance = 0.2,
 dollarPerPremiumCurrency = 1
+
+let messageLookup = new Map()
 
 let data = {
   broadcaster: '',
@@ -472,7 +475,7 @@ const payloadHandlers = {
           const oldAvatar = data.nameAvatar[sock.name]
           if (oldAvatar !== undefined) {
             fs.unlink(`/var/www/html/avatars/${oldAvatar}`, (err) => {
-              if (err) throw err;
+              if (err) throw err
             })
           }
           data.nameAvatar[sock.name] = avatar
@@ -536,6 +539,7 @@ const payloadHandlers = {
 
       const message = {
         type: 'message',
+        id: crypto.randomUUID(),
         avatar: data.nameAvatar[sock.name] || 'anon.png',
         name: sock.name,
         nameColor: sock.nameColor,
@@ -544,7 +548,11 @@ const payloadHandlers = {
         body: cleanBody
       }
 
-      data.messageHistory[data.messageHistoryIndex] = {name: sock.name, body: cleanBody}
+      messageLookup.set(message.id, sock.token)
+      if (messageLookup.size > maxMessageLookup) {
+        messageLookup.delete(messageLookup.keys().next().value)
+      }
+      data.messageHistory[data.messageHistoryIndex] = {id: message.id, name: sock.name, body: cleanBody}
 
       if (data.messageHistoryIndex + 1 >= maxMessageHistory) {
         data.messageHistoryIndex = 0
@@ -790,7 +798,7 @@ const payloadHandlers = {
             if (sock.name !== payload.name) {
               data.messageHistory.forEach((message, index) => {
                 if (sock.name === message.name) {
-                  data.messageHistory[index] = {name: payload.name, body: message.body};
+                  data.messageHistory[index] = {id: message.id, name: payload.name, body: message.body}
                 }
               })
             }
@@ -883,17 +891,15 @@ const payloadHandlers = {
       })
     }
   },
+  'command-delete-message': (sock, payload) {
+
+  },
   'command-data': (sock, payload) => {
     if (sock.token === data.broadcaster) {
       if (payload.data !== '') {
         sockSend(sock, {
           type: 'command-data-ok',
           data: data[payload.data]
-        })
-      } else {
-        sockSend(sock, {
-          type: 'command-data-ok',
-          data: data
         })
       }
     } else {
