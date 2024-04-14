@@ -427,7 +427,7 @@ const payloadHandlers = {
             nameColor: sock.nameColor,
             textColor: sock.textColor,
             bgColor: sock.bgColor,
-            avatar: data.nameAvatar[sock.name] !== 'anon.png',
+            avatar: data.nameAvatar[sock.name] || 'anon.png',
             stats: data.tokenStats[sock.token] || {},
             kofi: aggregateKofiData(sock.token),
             history: getHistory(),
