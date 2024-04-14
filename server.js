@@ -131,6 +131,23 @@ const hasPetalPlus = token => {
   return token === data.broadcaster || Date.now() < data.kofiSubTime[data.tokenKofi[token]]
 }
 
+const updateSockColors = sock => {
+  if (hasPetalPlus(sock.token)) {
+    sock.nameColor = data.nameColor[sock.name] || defaultNameColor
+    sock.textColor = data.nameTextColor[sock.name] || defaultTextColor
+    sock.bgColor = data.nameBgColor[sock.name] || defaultBgColor
+  } else {
+    const nameColor = data.nameColor[sock.name]
+    if (nameColor !== undefined) {
+      sock.nameColor = textBackgroundContrast(nameColor, defaultBgColor).good ? nameColor : defaultNameColor
+    } else {
+      sock.nameColor = defaultNameColor
+    }
+    sock.textColor = defaultTextColor
+    sock.bgColor = defaultBgColor
+  }
+}
+
 const aggregateKofiData = token => {
   // TODO: condense kofi data into a single object
   // (large implications including re-test of integration)
@@ -262,14 +279,7 @@ const authToken = (sock, token, name, newName=false) => {
     const action = sock.name === 'anon' ? 'joined' : 'changed name to ' + name
     sock.token = token
     sock.name = name
-    sock.nameColor = data.nameColor[name] || defaultNameColor
-    if (hasPetalPlus(token)) {
-      sock.textColor = data.nameTextColor[name] || defaultTextColor
-      sock.bgColor = data.nameBgColor[name] || defaultBgColor
-    } else {
-      sock.textColor = defaultTextColor
-      sock.bgColor = defaultBgColor
-    }
+    updateSockColors(sock)
     if (newName) {
       data.nameToken[name] = token
       names.push(sock.name)
@@ -409,14 +419,7 @@ const payloadHandlers = {
         if (data.tokenHash[token] === hash) {
           sock.token = token
           sock.name = payload.name
-          sock.nameColor = data.nameColor[sock.name] || defaultNameColor
-          if (hasPetalPlus(token)) {
-            sock.textColor = data.nameTextColor[sock.name] || defaultTextColor
-            sock.bgColor = data.nameBgColor[sock.name] || defaultBgColor
-          } else {
-            sock.textColor = defaultTextColor
-            sock.bgColor = defaultBgColor
-          }
+          updateSockColors(sock)
           sockSend(sock, {
             type: 'auth-password-ok',
             token: sock.token,
@@ -507,13 +510,7 @@ const payloadHandlers = {
       const user = [...socks].find(s => s.name === payload.name)
       if (user !== undefined) {
         const body = sanitize(payload.body)
-        if (hasPetalPlus(sock.token)) {
-          sock.textColor = data.nameTextColor[sock.name] || defaultTextColor
-          sock.bgColor = data.nameBgColor[sock.name] || defaultBgColor
-        } else {
-          sock.textColor = defaultTextColor
-          sock.bgColor = defaultBgColor
-        }
+        updateSockColors(sock)
         user.send(JSON.stringify({
           type: 'priv-message',
           name: sock.name,
@@ -543,14 +540,7 @@ const payloadHandlers = {
       const cleanBody = sanitize(payload.body)
 
       if (cleanBody.length > maxMessageLength) return
-
-      if (hasPetalPlus(sock.token)) {
-        sock.textColor = data.nameTextColor[sock.name] || defaultTextColor
-        sock.bgColor = data.nameBgColor[sock.name] || defaultBgColor
-      } else {
-        sock.textColor = defaultTextColor
-        sock.bgColor = defaultBgColor
-      }
+      updateSockColors(sock)
 
       const message = {
         type: 'message',
