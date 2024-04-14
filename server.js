@@ -328,6 +328,7 @@ const handleColorsPayload = (sock, payload) => {
     if (message.good) {
       sockSend(sock, {
         type: 'command-profile-ok',
+        avatar: data.nameAvatar[sock.name] || 'anon.png',
         name: payload.name || sock.name,
         nameColor: payload.nameColor,
         textColor: payload.textColor,
@@ -776,7 +777,7 @@ const payloadHandlers = {
           delete data.nameToken[sock.name]
           data.nameToken[payload.name] = sock.token
           data.tokenNames[sock.token] = [...data.tokenNames[sock.token].filter(n => n !== sock.name), payload.name]
-          const avatar = data.nameAvatar[payload.name] = data.nameAvatar[sock.name] || 'anon.png'
+          data.nameAvatar[payload.name] = data.nameAvatar[sock.name] || 'anon.png'
           delete data.nameAvatar[sock.name]
           delete data.nameColor[sock.name]
           sock.nameColor = data.nameColor[payload.name] = payload.nameColor
@@ -797,16 +798,6 @@ const payloadHandlers = {
 
           sock.name = payload.name
           saveData()
-
-          sockSend(sock, {
-            type: 'command-profile-ok',
-            avatar: avatar,
-            name: sock.name,
-            nameColor: sock.nameColor,
-            textColor: sock.textColor,
-            bgColor: sock.bgColor,
-            view: payload.view,
-          })
         } else {
           sockSend(sock, {
             type: 'command-colors-invalid',
