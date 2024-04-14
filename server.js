@@ -359,8 +359,8 @@ const getHistory = () => {
     avatar: data.nameAvatar[message.name] || 'anon.png',
     name: message.name,
     nameColor: data.nameColor[message.name] || defaultNameColor,
-    textColor: data.textColor[message.name] || defaultTextColor,
-    bgColor: data.bgColor[message.name] || defaultBgColor,
+    textColor: data.nameTextColor[message.name] || defaultTextColor,
+    bgColor: data.nameBgColor[message.name] || defaultBgColor,
     body: message.body,
   }})
 }
