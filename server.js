@@ -891,8 +891,8 @@ const payloadHandlers = {
       })
     }
   },
-  'command-delete-message': (sock, payload) {
-
+  'command-delete-message': (sock, payload) => {
+    //
   },
   'command-data': (sock, payload) => {
     if (sock.token === data.broadcaster) {
