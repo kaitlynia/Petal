@@ -763,7 +763,7 @@ const payloadHandlers = {
   'command-profile': (sock, payload) => {
     if (sock.token !== undefined) {
       if (payload.name !== undefined && validName(payload.name)) {
-        if (data.nameToken[payload.name] !== undefined) {
+        if (payload.name !== sock.name && data.nameToken[payload.name] !== undefined) {
           sockSend(sock, {
             type: 'auth-exists',
             name: payload.name,
