@@ -1,9 +1,60 @@
 document.addEventListener('DOMContentLoaded', () => {
 
 const rootURL = window.location.href.split('://', 2)[1].split('/', 2)[0]
-body = document.querySelector('body'),
-messages = document.querySelector('#messages'),
-entry = document.querySelector('#entry'),
+body = document.getElementById('main'),
+messages = document.getElementById('messages'),
+messageContextMenu = document.getElementById('messageContextMenu'),
+entry = document.getElementById('entry'),
+petal = document.getElementById('petal'),
+menu = document.getElementById('menu'),
+menuTabs = document.querySelectorAll('.menuTab'),
+menuDataElements = {
+  name: document.querySelector('[data-profile-name]'),
+  avatar: document.querySelector('[data-profile-avatar]'),
+  message: document.querySelector('[data-profile-message]'),
+  background: document.querySelector('[data-profile-background]'),
+  profileError: document.querySelector('[data-profile-error]'),
+  currency: document.querySelector('[data-stats-currency]'),
+  premiumCurrency: document.querySelector('[data-stats-premium-currency]'),
+  currencyEarned: document.querySelector('[data-stats-currency-earned]'),
+  currencyEarnedFromSub: document.querySelector('[data-stats-currency-earned-from-sub]'),
+  premiumCurrencyEarned: document.querySelector('[data-stats-premium-currency-earned]'),
+  premiumCurrencyClaimed: document.querySelector('[data-stats-premium-currency-claimed]'),
+  subStatus: document.querySelector('[data-stats-sub-status]'),
+  subOnly: document.querySelector('[data-stats-sub-only]'),
+  subTime: document.querySelector('[data-stats-sub-time]'),
+  subStreak: document.querySelector('[data-stats-sub-streak]'),
+  monthsSubbed: document.querySelector('[data-stats-months-subbed]'),
+  subsTotal: document.querySelector('[data-stats-subs-total]'),
+  donations: document.querySelector('[data-stats-donations]'),
+  kofiTotal: document.querySelector('[data-stats-kofi-total]'),
+  passwordError: document.querySelector('[data-password-error]'),
+  kofiError: document.querySelector('[data-kofi-error]'),
+  messageScrollThreshold: document.querySelector('[data-message-scroll-threshold]'),
+},
+changeAvatar = document.getElementById('changeAvatar'),
+nameColorInput = document.getElementById('nameColor'),
+messageColorInput = document.getElementById('messageColor'),
+backgroundColorInput = document.getElementById('backgroundColor'),
+nameColorButton = document.getElementById('changeNameColor'),
+messageColorButton = document.getElementById('changeMessageColor'),
+backgroundColorButton = document.getElementById('changeBackgroundColor'),
+saveProfile = document.getElementById('saveProfile'),
+resetProfile = document.getElementById('resetProfile'),
+enterPasswordInput = document.getElementById('enterPassword'),
+changePasswordInput = document.getElementById('changePassword'),
+confirmPasswordInput = document.getElementById('confirmPassword'),
+savePassword = document.getElementById('savePassword'),
+kofiInput = document.getElementById('kofi'),
+saveKofi = document.getElementById('saveKofi'),
+showConnectionEvents = document.getElementById('showConnectionEvents'),
+messageScrollThreshold = document.getElementById('messageScrollThreshold'),
+colorisConfig = {
+  themeMode: 'dark',
+  format: 'hex',
+  alpha: false
+}
+shortMonthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
 passwordChar = '⬤',
 currencyEmoji = '&#x1F33A;',
 currencyName = 'Petal',
@@ -11,36 +62,40 @@ premiumCurrencyEmoji = '&#x1F338;',
 premiumCurrencyName = 'Blossom',
 maxMessageLength = 500,
 sanitize = s => DOMPurify.sanitize(s, sanitizeConfig),
-validName = s => !/[^0-9a-z]/i.test(s),
-validColor = s => {
-  const style = new Option().style
-  style.color = s
-  return !['unset', 'initial', 'inherit', ''].includes(style.color)
-},
+validName = s => s.length > 0 && !/[^0-9a-z]/i.test(s),
+validHexColor = s => s.length === 7 && /#[0-9a-f]{6}/i.test(s),
 validEmail = s => /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/.test(s)
+
+const numMenuTabs = menuTabs.length
 
 let server = null,
 controlKeyHeld = false,
+escapeKeyHeld = false,
 tempName = '',
 passwordMode = false,
-typedPassword = '',
+entryPassword = '',
+menuPassword = '',
+menuKofi = '',
 loggedIn = false,
 lastMessageGroup = null,
+messageContextMenuOpen = false,
+menuOpen = false,
 sanitizeConfig = {
   ALLOWED_TAGS: ['a', 'b', 'i', 's', 'u', 'br'],
   ALLOWED_ATTR: ['href', 'target', 'rel']
 },
-userData = {
+data = {
   server: localStorage.getItem('server') || 'chat.lynnya.live',
   token: localStorage.getItem('token') || undefined,
   name: localStorage.getItem('name') || undefined,
   color: localStorage.getItem('color') || undefined,
   textColor: localStorage.getItem('bgColor') || undefined,
   bgColor: localStorage.getItem('bgcolor') || undefined,
+  moderator: localStorage.getItem('moderator') === 'true',
   lastUserPrivateMessaged: localStorage.getItem('lastUserPrivateMessaged') || undefined,
   theme: localStorage.getItem('theme') || 'dark',
-  scrollThreshold: localStorage.getItem('scrollThreshold') || 100,
-  logConnectionEvents: localStorage.getItem('logConnectionEvents') || true,
+  messageScrollThreshold: Number(localStorage.getItem('messageScrollThreshold') || 250),
+  showConnectionEvents: localStorage.getItem('showConnectionEvents') === 'true',
 },
 avatarImage = document.createElement('img'),
 avatarCanvas = document.createElement('canvas'),
@@ -51,56 +106,255 @@ avatarCanvas.height = 256
 let avatarCanvasContext = avatarCanvas.getContext('2d')
 avatarInput.type = 'file'
 
-const setUserData = (key, val) => {
-  userData[key] = val
+const setData = (key, val) => {
+  data[key] = val
   localStorage.setItem(key, val)
 }
 
+const luminance = hex => {
+  a = hh => {
+    v = parseInt(hh, 16) / 255
+    return v <= 0.03928
+      ? v / 12.92
+      : Math.pow((v + 0.055) / 1.055, 2.4)
+  }
+  return a(hex.slice(1,3)) * 0.2126 + a(hex.slice(3,5)) * 0.7152 + a(hex.slice(5,7)) * 0.0722
+}
+
+const rgbToHex = rgb => {
+  if (rgb.charAt(0) === '#') return rgb
+  return '#' + rgb.replace('rgb(', '').replace(')', '').split(',').map(s => ('0'+Number(s).toString(16)).slice(-2)).join('')
+}
+
+const textBackgroundContrast = (text, background) => {
+  if (text === background) {
+    return {good: false, ratio: 1, reason: 'Text and background are the same color'}
+  }
+  const lum1 = luminance(text)
+  const lum2 = luminance(background)
+  const ratio = (Math.max(lum1, lum2) + 0.05) / (Math.min(lum1, lum2) + 0.05)
+
+  if (ratio >= 4.5) {
+    return {good: true, ratio: ratio, reason: 'good'}
+  } else if (lum1 > lum2) {
+    if (lum1 / 2 < 0.5) {
+      return {good: false, ratio: ratio, reason: 'Text color is too dark'}
+    } else {
+      return {good: false, ratio: ratio, reason: 'Background color is too light'}
+    }
+  } else {
+    if (lum2 / 2 < 0.5) {
+      return {good: false, ratio: ratio, reason: 'Background color is too dark'}
+    } else {
+      return {good: false, ratio: ratio, reason: 'Text color is too light'}
+    }
+  }
+}
+
+const formatSubTime = subTime => {
+  const date = new Date(subTime)
+  return `${shortMonthNames[date.getUTCMonth()]} ${date.getUTCDate()}`
+}
+
+const resetMenu = () => {
+  // the following 4 lines should execute first for security reasons
+  menuPassword = ''
+  savePassword.classList.add('hidden')
+  changePasswordInput.value = ''
+  confirmPasswordInput.value = ''
+  // end security lines
+  resetProfile.click()
+  menuDataElements.passwordError.classList.add('hidden')
+  kofiInput.value = ''
+  menuDataElements.kofiError.classList.add('hidden')
+  saveKofi.classList.add('hidden')
+}
+
+const handleMenuProfileError = (error, noReset) => {
+  saveProfile.classList.add('hidden')
+  if (!noReset) resetProfile.classList.remove('hidden')
+  menuDataElements.profileError.classList.remove('good')
+  menuDataElements.profileError.innerText = error
+  menuDataElements.profileError.classList.remove('hidden')
+}
+
+const handleMenuProfileOK = message => {
+  resetProfile.classList.add('hidden')
+  saveProfile.classList.add('hidden')
+  menuDataElements.profileError.classList.add('good')
+  menuDataElements.profileError.innerText = message
+  menuDataElements.profileError.classList.remove('hidden')
+}
+
+const checkColors = (nameColor, textColor, bgColor) => {
+  const name = textBackgroundContrast(nameColor, bgColor)
+  if (name.good) {
+    const message = textBackgroundContrast(textColor, bgColor)
+    if (message.good) {
+      return message
+    } else {
+      message.reason = message.reason.replace('Text', 'Message')
+      return message
+    }
+  } else {
+    name.reason = name.reason.replace('Text', 'Name')
+    return name
+  }
+}
+
+const changeAvatarOnClick = event => avatarInput.click()
+const menuNameOnClick = event => {
+  menuDataElements.name.innerText = ''
+  menuDataElements.name.contentEditable = 'true'
+  menuDataElements.name.focus()
+}
+
+const checkProfile = () => {
+  const name = menuDataElements.name.innerText
+  const color = rgbToHex(menuDataElements.name.style.color)
+  const textColor = rgbToHex(menuDataElements.message.style.color)
+  const bgColor = rgbToHex(menuDataElements.background.style.backgroundColor)
+
+  if (name === data.name && color === data.color && textColor === data.textColor && bgColor === data.bgColor) {
+    menuDataElements.profileError.classList.add('hidden')
+    menuDataElements.profileError.innerText = ''
+    saveProfile.classList.add('hidden')
+    resetProfile.classList.add('hidden')
+  } else if (validName(name)) {
+    const colorResult = checkColors(color, textColor, bgColor)
+    if (colorResult.good) {
+      menuDataElements.profileError.classList.add('hidden')
+      menuDataElements.profileError.innerText = ''
+      saveProfile.classList.remove('hidden')
+      resetProfile.classList.remove('hidden')
+    } else {
+      handleMenuProfileError(colorResult.reason)
+    }
+  } else {
+    handleMenuProfileError('Invalid name, letters/numbers only')
+  }
+}
+
+const handleColorsPayload = payload => {
+  setData('color', payload.nameColor)
+  menuDataElements.name.style.color = payload.nameColor
+  nameColorInput.value = payload.nameColor
+  setData('textColor', payload.textColor)
+  menuDataElements.message.style.color = payload.textColor
+  messageColorInput.value = payload.textColor
+  entry.style.color = payload.textColor
+  setData('bgColor', payload.bgColor)
+  menuDataElements.background.style.backgroundColor = payload.bgColor
+  backgroundColorInput.value = payload.bgColor
+  entry.style.backgroundColor = payload.bgColor
+}
+
+const handleStatsData = stats => {
+  menuDataElements.currency.innerText = stats.currency || 0
+  menuDataElements.premiumCurrency.innerText = stats.premiumCurrency || 0
+  menuDataElements.currencyEarned.innerText = stats.currencyEarned || 0
+  menuDataElements.currencyEarnedFromSub.innerText = stats.currencyEarnedFromSub || 0
+  menuDataElements.premiumCurrencyEarned.innerText = stats.premiumCurrencyEarned || 0
+  menuDataElements.premiumCurrencyClaimed.innerText = stats.premiumCurrencyClaimed || 0
+}
+
+const handleKofiData = kofi => {
+  if (kofi.subStatus) {
+    backgroundColorButton.classList.remove('hidden')
+    messageColorButton.classList.remove('hidden')
+    menuDataElements.subStatus.innerText = 'active'
+    menuDataElements.subTime.innerText = formatSubTime(kofi.subTime)
+    menuDataElements.subStreak.innerText = kofi.subStreak
+    menuDataElements.subOnly.classList.remove('hidden')
+  } else {
+    messageColorButton.classList.add('hidden')
+    backgroundColorButton.classList.add('hidden')
+    menuDataElements.subStatus.innerText = 'inactive'
+    menuDataElements.subOnly.classList.add('hidden')
+    menuDataElements.subTime.innerText = ''
+    menuDataElements.subStreak.innerText = ''
+  }
+  menuDataElements.monthsSubbed.innerText = kofi.monthsSubbed || 0
+  menuDataElements.subsTotal.innerText = kofi.subsTotal || 0
+  menuDataElements.donations.innerText = kofi.donations || 0
+  menuDataElements.kofiTotal.innerText = kofi.kofiTotal || 0
+}
+
+const handleProfileData = payload => {
+  setData('name', payload.name)
+  menuDataElements.name.innerText = payload.name
+  menuDataElements.avatar.src = `/avatars/${payload.avatar}`
+  nameColorButton.classList.remove('hidden')
+  handleColorsPayload(payload)
+  handleStatsData(payload.stats)
+  handleKofiData(payload.kofi)
+}
+
 const tryScrollFrom = scrollHeight => {
-  if (messages.clientHeight + messages.scrollTop + userData.scrollThreshold >= scrollHeight) {
+  if (messages.clientHeight + messages.scrollTop + data.messageScrollThreshold >= scrollHeight) {
     messages.scrollTop = messages.scrollHeight
   }
 }
 
-const addMessage = (text, modifier) => {
+const addMessage = (text, modifier, id) => {
   const scrollHeight = messages.scrollHeight
   lastMessageGroup = null
+  idText = id !== undefined ? `id="msg-${id}" `: ''
 
-  messages.innerHTML += `<div class="msg${modifier !== undefined ? ' msg--' + modifier : ''}">${text}</div>`
-
-  tryScrollFrom(scrollHeight)
-}
-
-const addMessageGroup = (payload, messageText) => {
-  const scrollHeight = messages.scrollHeight
-  lastMessageGroup = payload.name
-
-  messages.innerHTML += `<div class="msg-group" style="background: ${payload.bgColor};"><img class="avatar" src="/avatars/${payload.hasAvatar ? payload.name : 'anon'}.png"><div class="col"><div class="author" style="color: ${payload.nameColor};">${payload.name}</div><div class="msg" style="color: ${payload.textColor};">${messageText}</div></div>`
+  messages.innerHTML += `<div ${idText}class="msg${modifier !== undefined ? ' msg--' + modifier : ''}">${text}</div>`
 
   tryScrollFrom(scrollHeight)
 }
 
-const addToLastMessageGroup = (textColor, messageText) => {
+const addMessageGroup = (message, messageText) => {
   const scrollHeight = messages.scrollHeight
+  lastMessageGroup = message.name
+  idText = message.id !== undefined ? `id="msg-${message.id}" `: ''
 
-  messages.querySelector('.msg-group:last-of-type > .col').innerHTML += `<div class="msg" style="color: ${textColor};">${messageText}</div>`
+  messages.innerHTML += `<div class="msg-group" style="color: ${message.textColor}; background: ${message.bgColor};"><img class="avatar" src="/avatars/${message.avatar}"><div class="col"><div class="author" style="color: ${message.nameColor};">${message.name}</div><div ${idText}class="msg" style="color: ${message.textColor};">${messageText}</div></div>`
+
+  tryScrollFrom(scrollHeight)
+}
+
+const addToLastMessageGroup = (message, messageText) => {
+  const scrollHeight = messages.scrollHeight
+  idText = message.id !== undefined ? `id="msg-${message.id}" `: ''
+
+  messages.querySelector('.msg-group:last-of-type > .col').innerHTML += `<div ${idText}class="msg">${messageText}</div>`
 
   tryScrollFrom(scrollHeight)
 }
 
 const addHistory = history => {
   for (const message of history) {
-    const cleanBody = sanitize(message.body)
     if (lastMessageGroup === null || lastMessageGroup !== message.name) {
-      addMessageGroup(message, cleanBody)
+      addMessageGroup(message, message.body)
     } else (
-      addToLastMessageGroup(message.textColor, cleanBody)
+      addToLastMessageGroup(message, message.body)
     )
   }
 }
 
 const systemMessage = message => {
   addMessage(message, 'system')
+}
+
+const toggleMenu = () => {
+  menuOpen = menu.classList.contains('hidden')
+  menuOpen ? menu.classList.remove('hidden') : menu.classList.add('hidden')
+  if (!menuOpen) {
+    resetMenu()
+  }
+}
+
+const toggleMenuTab = tab => {
+  if (!tab.classList.contains('active')) {
+    resetMenu()
+    document.querySelectorAll('.menuTab').forEach(t => t.classList.remove('active'))
+    tab.classList.add('active')
+    document.querySelectorAll('.menuPage').forEach(p => p.classList.remove('active'))
+    document.getElementById(tab.dataset.page).classList.add('active')
+  }
 }
 
 const processEntry = content => {
@@ -148,66 +402,102 @@ const send = payload => server.send(JSON.stringify(payload))
 
 const payloadHandlers = {
   'auth-exists': payload => {
-    if (userData.token !== undefined) {
+    if (data.token !== undefined) {
       systemMessage('name exists, attempting to log in using the stored token...')
       send({
         type: 'auth-token',
         name: payload.name,
-        token: userData.token
+        token: data.token
       })
     } else {
-      entry.value = ''
-      passwordMode = true
-      entry.focus()
-      systemMessage('name exists, and you have no stored token. please enter your password (enter nothing to cancel)')
+      if (payload.view === 'command') {
+        entry.value = ''
+        passwordMode = true
+        entry.focus()
+        systemMessage('name exists, and you have no stored token. please enter your password (enter nothing to cancel)')
+      } else if (payload.view === 'menu') {
+        menuDataElements.name.removeEventListener('click', menuNameOnClick)
+        menuDataElements.name.classList.add('cursor-inherit')
+        enterPasswordInput.classList.remove('hidden')
+        saveProfile.innerText = 'Submit'
+        resetProfile.innerText = 'Cancel'
+        saveProfile.classList.remove('hidden')
+        resetProfile.classList.remove('hidden')
+      }
     }
   },
   'auth-name-invalid': payload => {
-    systemMessage('invalid name. only letters and numbers are allowed.')
+    payloadHandlers['command-profile-invalid-name'](payload)
   },
   'auth-new': payload => {
-    userData.name = payload.name
-    userData.token = payload.token
-    systemMessage('account created. logging in...')
+    data.name = payload.name
+    data.token = payload.token
+    if (payload.view === 'command') {
+      systemMessage('account created. logging in...')
+    }
     send({
-      type: 'auth-recv'
+      type: 'auth-recv',
+      view: payload.view,
     })
   },
   'auth-new-ok': payload => {
-    setUserData('name', userData.name)
-    setUserData('token', userData.token)
-    systemMessage(`logged in as <b>${payload.name}</b>. to maintain account access, use /password`)
+    setData('token', data.token)
+    setData('name', payload.name)
     loggedIn = true
     addHistory(payload.history)
     payloadHandlers['participants-ok'](payload)
+    if (payload.view === 'command') {
+      systemMessage(`logged in. please set a password by accessing the Petal menu, then Settings`)
+    } else if (payload.view === 'menu') {
+      handleMenuProfileOK('Logged in, set a password in Settings')
+    }
   },
   'auth-password-ok': payload => {
-    setUserData('name', payload.name)
-    setUserData('token', payload.token)
-    setUserData('color', payload.nameColor)
-    setUserData('textColor', payload.textColor)
-    setUserData('bgColor', payload.bgColor)
-    systemMessage(`logged in as <b style="color: ${payload.nameColor};">${payload.name}</b>`)
+    setData('token', payload.token)
+    changeAvatar.addEventListener('click', changeAvatarOnClick)
+    handleProfileData(payload)
+    handleStatsData(payload.stats)
+    handleKofiData(payload.kofi)
+    setData('moderator', payload.moderator)
     if (!loggedIn) {
       loggedIn = true
       addHistory(payload.history)
       payloadHandlers['participants-ok'](payload)
+      if (payload.view === 'command') {
+        systemMessage(`logged in as <b style="color: ${payload.nameColor};">${payload.name}</b>`)
+      } else if (payload.view === 'menu') {
+        handleMenuProfileOK('Logged in')
+        menuDataElements.name.addEventListener('click', menuNameOnClick)
+        menuDataElements.name.classList.remove('cursor-inherit')
+      }
+    } else if (payload.view === 'command') {
+      systemMessage(`changed name to <b style="color: ${payload.nameColor};">${payload.name}</b>`)
     }
   },
   'auth-ok': payload => {
-    setUserData('name', payload.name)
-    setUserData('color', payload.nameColor)
-    setUserData('textColor', payload.textColor)
-    setUserData('bgColor', payload.bgColor)
-    systemMessage(`logged in as <b style="color: ${payload.nameColor};">${payload.name}</b>`)
+    changeAvatar.addEventListener('click', changeAvatarOnClick)
+    changeAvatar.classList.remove('cursor-inherit')
+    handleProfileData(payload)
+    handleStatsData(payload.stats)
+    handleKofiData(payload.kofi)
+    setData('moderator', payload.moderator)
     if (!loggedIn) {
       loggedIn = true
       addHistory(payload.history)
+      systemMessage(`logged in as <b style="color: ${payload.nameColor};">${payload.name}</b>`)
       payloadHandlers['participants-ok'](payload)
+    } else {
+      systemMessage(`changed name to <b style="color: ${payload.nameColor};">${payload.name}</b>`)
     }
   },
   'auth-fail-password': payload => {
-    systemMessage('incorrect password')
+    if (payload.view === 'command') {
+      systemMessage('incorrect password')
+    } else if (payload.view === 'menu') {
+      handleMenuProfileError('Incorrect password', true)
+      menuDataElements.name.classList.remove('cursor-inherit')
+      menuDataElements.name.addEventListener('click', menuNameOnClick)
+    }
   },
   'auth-fail-max-names': payload => {
     systemMessage('you have reached the maximum number of names. (10)')
@@ -219,7 +509,12 @@ const payloadHandlers = {
     systemMessage(`login failed (reason: auth_pair missing). if you see this, please contact lynn with details`)
   },
   'participants-ok': payload => {
-    systemMessage(`users here now (${payload.participants.length}): ${payload.participants.join(', ')}`)
+    const names = [...new Set(payload.participants)]
+    const counts = names.map(n => {
+      const count = payload.participants.filter(m => m === n).length
+      return count === 1 ? n : `${n} [${count}]`
+    })
+    systemMessage(`${names.length} user${names.length !== 1 ? ' ' : ''} connected: ${counts.join(', ')}`)
   },
   'participants-update': payload => {
     // TODO: implement UI for participants
@@ -234,7 +529,7 @@ const payloadHandlers = {
   'priv-message-sent': payload => {
     const cleanBody = sanitize(payload.body)
     if (cleanBody !== '') {
-      setUserData('lastUserPrivateMessaged', payload.name)
+      setData('lastUserPrivateMessaged', payload.name)
       systemMessage(`→ <b>${payload.name}</b>: ${cleanBody}`, payload.type)
     }
   },
@@ -251,66 +546,150 @@ const payloadHandlers = {
       )
     }
   },
+  'delete-message': payload => {
+    const message = document.getElementById(`msg-${payload.id}`)
+    if (message !== null) {
+      message.innerText = '[message deleted]'
+    }
+  },
+  'command-unauthorized': payload => {
+    systemMessage('you are not authorized to use this command.')
+  },
   'command-kofi-auth-fail': payload => {
-    systemMessage('this Ko-fi email has already been claimed. if you believe this is an error, please contact lynn')
+    if (payload.view === 'command') {
+      systemMessage('this Ko-fi email has already been claimed. if you believe this is an error, please contact lynn')
+    } else if (payload.view === 'view') {
+      menuDataElements.kofiError.classList.remove('good')
+      menuDataElements.kofiError.innerText = 'Email claimed by another user'
+      menuDataElements.kofiError.classList.remove('hidden')
+    }
   },
   'command-kofi-auth-required': payload => {
-    systemMessage('only named users can set a Ko-fi email. use /name to name yourself')
+    if (payload.view === 'command') {
+      systemMessage('only named users can set a Ko-fi email. use /name to name yourself')
+    } else if (payload.view === 'menu') {
+      menuDataElements.kofiError.classList.remove('good')
+      menuDataElements.kofiError.innerText = 'Change name before changing email'
+      menuDataElements.kofiError.classList.remove('hidden')
+    }
   },
   'command-kofi-ok': payload => {
-    const premiumText = payload.premiumCurrency > 0 ? `, +<b>${payload.premiumCurrency}</b>${premiumCurrencyEmoji}` : ''
-    systemMessage(`changed Ko-fi email successfully. status: ${payload.sub ? '' : 'not '}subscribed${premiumText}`)
+    const premiumText = payload.award > 0 ? `, +<b>${payload.award}</b>${premiumCurrencyEmoji}` : ''
+    if (payload.view === 'command') {
+      systemMessage(`changed Ko-fi email successfully. status: ${payload.kofi.subStatus ? '' : 'not '}subscribed${premiumText}`)
+    } else if (payload.view === 'menu') {
+      menuDataElements.kofiError.classList.add('good')
+      menuDataElements.kofiError.innerText = `Saved${premiumText}`
+      menuDataElements.kofiError.classList.remove('hidden')
+      handleStatsData(payload.stats)
+      handleKofiData(payload.kofi)
+    }
   },
   'kofi-action': payload => {
     const premiumText = payload.premiumCurrency > 0 ? ` +<b>${payload.premiumCurrency}</b>${premiumCurrencyEmoji}` : ''
     systemMessage(`thanks for the ${payload.method}!${premiumText}`)
   },
-  'command-password-ok': payload => {
-    systemMessage('changed password successfully')
-  },
   'command-password-auth-required': payload => {
-    systemMessage('only named users can set a password. use /name to log in')
+    if (payload.view === 'command') {
+      systemMessage('only named users can set a password. use /name to log in')
+    } else if (payload.view === 'menu') {
+      menuDataElements.passwordError.classList.remove('good')
+      menuDataElements.passwordError.innerText = 'Change name before changing password'
+      menuDataElements.passwordError.classList.remove('hidden')
+    }
+  },
+  'command-password-ok': payload => {
+    if (payload.view === 'command') {
+      systemMessage('changed password successfully')
+    } else if (payload.view === 'menu') {
+      menuDataElements.passwordError.classList.add('good')
+      menuDataElements.passwordError.innerText = 'Saved'
+      menuDataElements.passwordError.classList.remove('hidden')
+    }
   },
   'command-color-ok': payload => {
-    setUserData('color', payload.color)
-    systemMessage(`color changed to <b style="color:${userData.color}">${userData.color}</b>`)
-  },
-  'command-color-invalid': payload => {
-    systemMessage('invalid hex color. examples: #ff9999 (pink), #007700 (dark green), #3333ff (blue)')
-  },
-  'command-color-auth-required': payload => {
-    systemMessage('only named users can change their name color, and only Ko-fi subscribers can change text/background colors. use /name to name yourself')
-  },
-  'command-color-sub-required': payload => {
-    systemMessage('only users with a linked Ko-fi subscription can change text/background colors. use /kofi to link your email if you are already subbed')
+    setData('color', payload.color)
+    systemMessage(`color changed to <b style="color:${data.color}">${data.color}</b>`)
   },
   'command-textcolor-ok': payload => {
-    setUserData('textColor', payload.color)
-    systemMessage(`text color changed to <b style="color:${userData.textColor}">${userData.textColor}</b>`)
+    setData('textColor', payload.color)
+    systemMessage(`text color changed to <b style="color:${data.textColor}">${data.textColor}</b>`)
   },
   'command-bgcolor-ok': payload => {
-    setUserData('bgColor', payload.color)
-    systemMessage(`background color changed to <b style="color:${userData.bgColor}">${userData.bgColor}</b>`)
+    setData('bgColor', payload.color)
+    systemMessage(`background color changed to <b style="color:${data.bgColor}">${data.bgColor}</b>`)
   },
-  'command-names-ok': payload => {
-    systemMessage(`names: ${payload.names.join(', ')}`)
+  'command-profile-invalid-name': payload => {
+    if (payload.view === 'command') {
+      systemMessage('invalid name, only letters and numbers are allowed.')
+    } else if (payload.view === 'menu') {
+      handleMenuProfileError('Invalid name, letters/numbers only')
+    }
+  },
+  'command-profile-auth-required': payload => {
+    if (payload.view === 'command') {
+      systemMessage('only named users can change their name color, and only Ko-fi subscribers can change text/background colors. use /name to name yourself')
+    } else if (payload.view === 'menu') {
+      handleMenuProfileError('Change name before changing colors')
+    }
+  },
+  'command-profile-sub-required': payload => {
+    if (payload.view === 'command') {
+      systemMessage('only users with a linked Ko-fi subscription can change text/background colors. use /kofi to link your email if you are already subbed')
+    } else if (payload.view === 'menu') {
+      handleMenuProfileError('Update Ko-fi email in Settings first')
+    }
+  },
+  'command-colors-invalid': payload => {
+    if (payload.view === 'command') {
+      systemMessage('invalid hex color. examples: #ff9999 (pink), #007700 (dark green), #3333ff (blue)')
+    } else if (payload.view === 'menu') {
+      handleMenuProfileError('Invalid hex color')
+    }
+  },
+  'command-colors-fail': payload => {
+    if (payload.view === 'command') {
+      systemMessage(`Colors are not contrasted enough, ${payload.reason.toLowerCase()}`)
+    } else if (payload.view === 'menu') {
+      handleMenuProfileError(payload.reason)
+    }
+  },
+  'command-profile-ok': payload => {
+    setData('name', payload.name)
+    menuDataElements.name.innerText = payload.name
+    menuDataElements.avatar.src = `/avatars/${payload.avatar}`
+    handleColorsPayload(payload)
+    if (payload.view === 'command') {
+      systemMessage(`changed profile to name: ${payload.name}, color: ${payload.nameColor}, text: ${payload.textColor}, bg: ${payload.bgColor}`)
+    } else if (payload.view === 'menu') {
+      handleMenuProfileOK('Saved')
+    }
   },
   'command-names-fail': payload => {
     systemMessage('you have no names. try /name <name>')
   },
-  'avatar-upload-ok': payload => {
-    systemMessage('avatar updated')
+  'command-names-ok': payload => {
+    systemMessage(`names: ${payload.names.join(', ')}`)
   },
   'avatar-upload-fail': payload => {
-    systemMessage(`invalid avatar (reason: ${payload.reason}). if you are certain the image you uploaded is valid, please contact lynn`)
+    if (payload.view === 'command') {
+      systemMessage(`invalid image. if you are certain the image you uploaded is valid, please contact lynn`)
+    } else if (payload.view === 'menu') {
+      handleMenuProfileError(`Invalid image`, true)
+    }
   },
   'avatar-upload-auth-required': payload => {
-    systemMessage('only named users can upload an avatar. use /name to name yourself')
+    if (payload.view === 'command') {
+      systemMessage('only named users can upload an avatar. use /name to name yourself')
+    } else if (payload.view === 'menu') {
+      handleMenuProfileError('Change name before changing avatar', true)
+    }
   },
-  'command-daily-ok': payload => {
-    const premiumText = payload.premiumCurrency > 0 ? ` +<b>${payload.premiumCurrency}</b>${premiumCurrencyEmoji}` : ''
-    const subText = payload.sub ? ' (sub bonus)' : ''
-    systemMessage(`+<b>${payload.currency}</b>${currencyEmoji}${premiumText}${subText} | next daily in ${formatTimeDelta(payload.time)}`)
+  'avatar-upload-ok': payload => {
+    if (payload.view === 'command') {
+      systemMessage('avatar updated')
+    }
+    menuDataElements.avatar.src = `/avatars/${payload.avatar}`
   },
   'command-daily-fail': payload => {
     systemMessage(`next daily in ${formatTimeDelta(payload.time)}`)
@@ -318,9 +697,17 @@ const payloadHandlers = {
   'command-daily-auth-required': payload => {
     systemMessage('only named users can claim daily currency. use /name to name yourself')
   },
+  'command-daily-ok': payload => {
+    const premiumText = payload.premiumCurrency > 0 ? ` +<b>${payload.premiumCurrency}</b>${premiumCurrencyEmoji}` : ''
+    const subText = payload.sub ? ' (sub bonus)' : ''
+    systemMessage(`+<b>${payload.currency}</b>${currencyEmoji}${premiumText}${subText} | next daily in ${formatTimeDelta(payload.time)}`)
+  },
+  'command-stats-auth-required': payload => {
+    systemMessage('only named users can view Petal stats. use /name to name yourself')
+  },
   'command-stats-ok': payload => {
-    switch (payload.view) {
-      case 'bal':
+    switch (payload.statsView) {
+      case 'command-bal':
         const currency = payload.stats.currency || 0
         const currencyStr = currency !== 1 ? `${currencyEmoji} ${currencyName}s` : `${currencyEmoji} ${currencyName}`
         const premiumCurrency = payload.stats.premiumCurrency || 0
@@ -328,35 +715,36 @@ const payloadHandlers = {
         systemMessage(`<b>${currency}</b>${currencyStr}, <b>${premiumCurrency}</b>${premiumCurrencyStr}`)
         break
     }
+    handleStatsData(payload.stats)
+    handleKofiData(payload.kofi)
   },
-  'command-stats-auth-required': payload => {
-    systemMessage('only named users can view Petal stats. use /name to name yourself')
+  'command-data-ok': payload => {
+    systemMessage(JSON.stringify(payload.data))
   },
+  'command-addmod-ok': payload => {
+    systemMessage(`added <b>${payload.name}</b> as a moderator`)
+  }
 }
 
 const events = {
   onerror: event => {
-    if (userData.logConnectionEvents) {
-      systemMessage(`failed to connect to ${cleanURL(server.url)}. use /connect to retry or /connect <url>`)
-    }
+    systemMessage(`connection lost. use /connect or refresh the page`)
   },
   onclose: event => {
-    if (userData.logConnectionEvents) {
-      systemMessage(`connection to ${cleanURL(server.url)} closed`)
-    }
+    systemMessage(`connection closed by server. use /connect or refresh the page`)
   },
   onopen: event => {
-    if (userData.logConnectionEvents) {
+    if (data.showConnectionEvents) {
       systemMessage('connected')
     }
 
-    setUserData('server', server.url)
+    setData('server', server.url)
 
-    if (userData.name !== undefined && userData.token !== undefined) {
+    if (data.name !== undefined && data.token !== undefined) {
       send({
         type: 'auth-token',
-        name: userData.name,
-        token: userData.token
+        name: data.name,
+        token: data.token
       })
     }
   },
@@ -372,7 +760,7 @@ const connect = url => {
     url = url.slice(0, -1)
   }
 
-  if (userData.logConnectionEvents) {
+  if (data.showConnectionEvents) {
     systemMessage(`connecting to ${cleanURL(url)}...`)
   }
   server = new WebSocket(url)
@@ -384,8 +772,8 @@ const commands = {
   connect: args => {
     let dest = args
     if (!dest) {
-      if (userData.server !== undefined) {
-        dest = userData.server
+      if (data.server !== undefined) {
+        dest = data.server
       } else {
         systemMessage(`missing server url. example: /connect ${rootURL}`)
         return -1
@@ -424,19 +812,20 @@ const commands = {
         tempName = args
         send({
           type: 'auth-name',
-          name: args
+          name: args,
+          view: 'command',
         })
         return 1
       } else {
-        payloadHandlers['auth-name-invalid']()
+        payloadHandlers['auth-name-invalid']({view: 'command'})
         return -1
       }
-    } else if (userData.name !== undefined) {
-      if (userData.color !== undefined) {
-        systemMessage(`your name is <b style="color:${userData.color}">${userData.name}</b>`)
+    } else if (data.name !== undefined) {
+      if (data.color !== undefined) {
+        systemMessage(`your name is <b style="color:${data.color}">${data.name}</b>`)
         return 1
       } else {
-        systemMessage(`your name is <b>${userData.name}</b>`)
+        systemMessage(`your name is <b>${data.name}</b>`)
         return 1
       }
     } else {
@@ -444,25 +833,42 @@ const commands = {
       return -1
     }
   },
-  kofi: args => {
-    if (userData.token !== undefined) {
-      if (args && validEmail(args)) {
+  rename: args => {
+    if (data.token !== undefined) {
+      if (args && validName(args)) {
         send({
-          type: 'command-kofi',
-          kofi: args
+          type: 'command-rename',
+          name: args
         })
-        return 1
       } else {
-        systemMessage('invalid email address.')
+        payloadHandlers['command-rename-invalid']({view: 'command'})
         return -1
       }
     } else {
-      payloadHandlers['command-kofi-auth-required']()
+      payloadHandlers['command-rename-auth-required']({view: 'command'})
+      return 1
+    }
+  },
+  kofi: args => {
+    if (data.token !== undefined) {
+      if (args && validEmail(args)) {
+        send({
+          type: 'command-kofi',
+          kofi: args,
+          view: 'command',
+        })
+        return 1
+      } else {
+        systemMessage('invalid email address')
+        return -1
+      }
+    } else {
+      payloadHandlers['command-kofi-auth-required']({view: 'command'})
       return 1
     }
   },
   password: args => {
-    if (userData.token !== undefined) {
+    if (data.token !== undefined) {
       passwordMode = true
       entry.focus()
       systemMessage('enter a new password (enter nothing to cancel)')
@@ -473,30 +879,35 @@ const commands = {
     }
   },
   names: args => {
-    if (userData.token !== undefined) {
+    if (data.token !== undefined) {
       send({
         type: 'command-names',
       })
       return 1
     } else {
-      payloadHandlers['command-names-fail']()
+      payloadHandlers['command-names-fail']({view: 'command'})
       return 1
     }
   },
   color: args => {
     if (args) {
-      if (validColor(args)) {
-        send({
-          type: 'command-color',
-          color: args
-        })
-        return 1
+      if (data.token !== undefined) {
+        if (validHexColor(args)) {
+          send({
+            type: 'command-color',
+            color: args
+          })
+          return 1
+        } else {
+          payloadHandlers['command-colors-invalid']({view: 'command'})
+          return -1
+        }
       } else {
-        payloadHandlers['command-color-invalid']()
-        return -1
+        payloadHandlers['command-profile-auth-required']({view: 'command'})
+          return 1
       }
-    } else if (userData.color !== undefined) {
-      systemMessage(`your name color is <b style="color: ${userData.color};">${userData.color}</b>`)
+    } else if (data.color !== undefined) {
+      systemMessage(`your name color is <b style="color: ${data.color};">${data.color}</b>`)
       return 1
     } else {
       systemMessage('you have the default name color. use /color <color> (ex. /color #ffaaaa)')
@@ -508,18 +919,23 @@ const commands = {
   },
   textcolor: args => {
     if (args) {
-      if (validColor(args)) {
-        send({
-          type: 'command-textcolor',
-          color: args
-        })
-        return 1
+      if (data.token !== undefined) {
+        if (validHexColor(args)) {
+          send({
+            type: 'command-textcolor',
+            color: args
+          })
+          return 1
+        } else {
+          payloadHandlers['command-colors-invalid']({view: 'command'})
+          return -1
+        }
       } else {
-        payloadHandlers['command-color-invalid']()
-        return -1
+        payloadHandlers['command-profile-auth-required']({view: 'command'})
+        return 1
       }
-    } else if (userData.textColor !== undefined) {
-      systemMessage(`your text color is <b style="color: ${userData.textColor};">${userData.textColor}</b>`)
+    } else if (data.textColor !== undefined) {
+      systemMessage(`your text color is <b style="color: ${data.textColor};">${data.textColor}</b>`)
       return 1
     } else {
       systemMessage('you have the default text color. use /textcolor <color> (ex. /textcolor #ffaaaa)')
@@ -528,22 +944,53 @@ const commands = {
   },
   bgcolor: args => {
     if (args) {
-      if (validColor(args)) {
-        send({
-          type: 'command-bgcolor',
-          color: args
-        })
-        return 1
+      if (data.token !== undefined) {
+        if (validHexColor(args)) {
+          send({
+            type: 'command-bgcolor',
+            color: args
+          })
+          return 1
+        } else {
+          payloadHandlers['command-colors-invalid']({view: 'command'})
+          return -1
+        }
       } else {
-        payloadHandlers['command-color-invalid']()
+        payloadHandlers['command-profile-auth-required']({view: 'command'})
         return -1
       }
-    } else if (userData.bgColor !== undefined) {
-      systemMessage(`your background color is <b style="color: ${userData.bgColor};">${userData.bgColor}</b>`)
+    } else if (data.bgColor !== undefined) {
+      systemMessage(`your background color is <b style="color: ${data.bgColor};">${data.bgColor}</b>`)
       return 1
     } else {
       systemMessage('you have the default background color. use /bgcolor <color> (ex. /bgcolor #ffaaaa)')
       return -1
+    }
+  },
+  colors: args => {
+    if (args) {
+      const colors = args.split(/\s+/)
+      if (colors.length !== 3 || !colors.every(c => validHexColor(c))) {
+        payloadHandlers['command-colors-invalid']({view: 'command'})
+        return -1
+      } else {
+        const result = checkColors(...colors)
+        if (result.good) {
+          send({
+            type: 'command-colors',
+            nameColor: colors[0],
+            textColor: colors[1],
+            bgColor: colors[2],
+            view: 'command',
+          })
+        } else {
+          payloadHandlers['command-colors-fail']({
+            type: 'command-colors-fail',
+            reason: result.reason,
+            view: 'command',
+          })
+        }
+      }
     }
   },
   avatar: args => {
@@ -571,13 +1018,13 @@ const commands = {
     }
   },
   c: args => {
-    if (userData.lastUserPrivateMessaged === undefined) {
+    if (data.lastUserPrivateMessaged === undefined) {
       systemMessage('no previous recipient. example: /w exampleUser23 hi, /c hello again!')
       return -1
     } else if (args && args.length > 1) {
       send({
         type: 'priv-message',
-        name: userData.lastUserPrivateMessaged,
+        name: data.lastUserPrivateMessaged,
         body: sanitize(args),
       })
       return 1
@@ -587,27 +1034,41 @@ const commands = {
     }
   },
   daily: args => {
-    if (userData.token !== undefined) {
+    if (data.token !== undefined) {
       send({
         type: 'command-daily',
       })
       return 1
     } else {
-      payloadHandlers['command-daily-auth-required']()
+      payloadHandlers['command-daily-auth-required']({view: 'command'})
       return 1
     }
   },
   bal: args => {
-    if (userData.token !== undefined) {
+    if (data.token !== undefined) {
       send({
         type: 'command-stats',
-        view: 'bal',
+        statsView: 'command-bal',
       })
       return 1
     } else {
-      payloadHandlers['command-stats-auth-required']()
+      payloadHandlers['command-stats-auth-required']({view: 'command'})
       return 1
     }
+  },
+  data: args => {
+    send({
+      type: 'command-data',
+      data: args,
+    })
+    return 1
+  },
+  addmod: args => {
+    send({
+      type: 'command-addmod',
+      name: args,
+    })
+    return 1
   }
 }
 
@@ -628,29 +1089,31 @@ const tryCommand = content => {
 const processKeyboardEvent = event => {
   if (passwordMode) {
     if (event.key === 'Backspace') {
-      typedPassword = typedPassword.slice(0, -1)
+      entryPassword = entryPassword.slice(0, -1)
       entry.value = entry.value.slice(0, -1)
     } else if (event.key.length < 2)  {
-      typedPassword += event.key
-      entry.value = passwordChar.repeat(typedPassword.length)
+      entryPassword += event.key
+      entry.value = passwordChar.repeat(entryPassword.length)
     } else if (event.key === 'Enter') {
       entry.value = ''
       passwordMode = false
-      if (typedPassword === '') return systemMessage('password entry cancelled')
-      if (userData.token !== undefined) {
+      if (entryPassword === '') return systemMessage('password entry cancelled')
+      if (data.token !== undefined) {
         send({
           type: 'command-password',
-          password: typedPassword,
+          password: entryPassword,
+          view: payload.view,
         })
       } else {
         send({
           type: 'auth-password',
           name: tempName,
-          password: typedPassword,
+          password: entryPassword,
+          view: payload.view,
         })
         tempName = ''
       }
-      typedPassword = ''
+      entryPassword = ''
     }
     event.preventDefault()
     event.stopPropagation()
@@ -678,7 +1141,7 @@ const processKeyboardEvent = event => {
               entry.value = ''
             } catch (e) {
               console.log(e)
-              systemMessage('failed to send message. use /connect to reconnect or /connect <url>')
+              systemMessage('failed to send message. use /connect to reconnect or refresh the page')
             }
           } else {
             systemMessage(`failed to send message. ${processedEntry.length} characters long, max message length is ${maxMessageLength}`)
@@ -698,15 +1161,25 @@ const processKeyboardEvent = event => {
 body.addEventListener('keydown', event => {
   if (event.key === 'Control') {
     controlKeyHeld = true
-  } else if (!controlKeyHeld) {
+  } else if (event.key === 'Escape' && !escapeKeyHeld) {
+    escapeKeyHeld = true
+    toggleMenu()
+  } else if (!(menuOpen || escapeKeyHeld || controlKeyHeld)) {
     entry.focus()
     processKeyboardEvent(event)
+  } else if (escapeKeyHeld) {
+    const tabIndex = Number(event.key)
+    if (tabIndex > 0 && tabIndex <= numMenuTabs) {
+      toggleMenuTab(menuTabs[tabIndex - 1])
+    }
   }
 })
 
 body.addEventListener('keyup', event => {
   if (event.key === 'Control') {
     controlKeyHeld = false
+  } else if (event.key === 'Escape') {
+    escapeKeyHeld = false
   }
 })
 
@@ -727,18 +1200,265 @@ avatarImage.addEventListener('load', event => {
 
   send({
     type: 'avatar-upload',
-    data: avatarCanvas.toDataURL('image/png')
+    data: avatarCanvas.toDataURL('image/png'),
+    view: menuOpen ? 'menu' : 'command'
   })
 })
-
 avatarInput.addEventListener('change', event => {
   avatarImage.src = URL.createObjectURL(avatarInput.files[0])
 })
 
+petal.addEventListener('click', event => {
+  toggleMenu()
+  event.stopPropagation()
+})
+
+menuTabs.forEach(tab => tab.addEventListener('click', event => toggleMenuTab(tab)))
+
+menuDataElements.name.addEventListener('click', menuNameOnClick)
+
+menuDataElements.name.addEventListener('focusout', event => {
+  menuDataElements.name.contentEditable = 'false'
+  if (menuDataElements.name.innerText === '') {
+    menuDataElements.name.innerText = data.name
+  }
+  checkProfile()
+})
+
+menuDataElements.name.addEventListener('keydown', event => {
+  if (event.key === 'Enter') {
+    event.preventDefault()
+    event.stopPropagation()
+    const focusout = new Event('focusout')
+    menuDataElements.name.dispatchEvent(focusout)
+  }
+})
+
+menuDataElements.name.style.color = rgbToHex(window.getComputedStyle(menuDataElements.name).color)
+menuDataElements.message.style.color = rgbToHex(window.getComputedStyle(menuDataElements.message).color)
+menuDataElements.background.style.backgroundColor = rgbToHex(window.getComputedStyle(menuDataElements.background).backgroundColor)
+
+nameColorButton.addEventListener('click', event => {
+  Coloris({...colorisConfig, onChange: color => {
+    menuDataElements.name.style.color = color
+    checkProfile()
+  }})
+  nameColorInput.click()
+})
+messageColorButton.addEventListener('click', event => {
+  Coloris({...colorisConfig, onChange: color => {
+    menuDataElements.message.style.color = color
+    checkProfile()
+  }})
+  messageColorInput.click()
+})
+backgroundColorButton.addEventListener('click', event => {
+  Coloris({...colorisConfig, onChange: color => {
+    menuDataElements.background.style.backgroundColor = color
+    checkProfile()
+  }})
+  backgroundColorInput.click()
+})
+
+Coloris(colorisConfig)
+
+saveProfile.addEventListener('click', event => {
+  menuDataElements.profileError.classList.add('hidden')
+  saveProfile.classList.add('hidden')
+  resetProfile.classList.add('hidden')
+
+  if (!enterPasswordInput.classList.contains('hidden')) {
+    enterPasswordInput.classList.add('hidden')
+
+    send({
+      type: 'auth-password',
+      name: menuDataElements.name.innerText,
+      password: enterPasswordInput.value,
+      view: 'menu',
+    })
+
+    enterPasswordInput.value = ''
+    saveProfile.innerText = 'Save'
+    resetProfile.innerText = 'Reset'
+
+  } else if (data.token === undefined) {
+    send({
+      type: 'auth-name',
+      name: menuDataElements.name.innerText,
+      view: 'menu',
+    })
+  } else {
+    send({
+      type: 'command-profile',
+      name: menuDataElements.name.innerText,
+      nameColor: rgbToHex(menuDataElements.name.style.color),
+      textColor: rgbToHex(menuDataElements.message.style.color),
+      bgColor: rgbToHex(menuDataElements.background.style.backgroundColor),
+      view: 'menu',
+    })
+  }
+})
+
+resetProfile.addEventListener('click', event => {
+  menuDataElements.profileError.classList.add('hidden')
+  resetProfile.classList.add('hidden')
+  saveProfile.classList.add('hidden')
+  if (!enterPasswordInput.classList.contains('hidden')) {
+    menuDataElements.name.classList.remove('cursor-inherit')
+    menuDataElements.name.addEventListener('click', menuNameOnClick)
+    enterPasswordInput.classList.add('hidden')
+    enterPasswordInput.value = ''
+    saveProfile.innerText = 'Save'
+    resetProfile.innerText = 'Reset'
+  }
+  menuDataElements.name.innerText = data.name || 'anon'
+  menuDataElements.name.style.color = data.color
+  menuDataElements.message.style.color = data.textColor
+  menuDataElements.background.style.backgroundColor = data.bgColor
+})
+
+let passwordCheckTimeout = null
+
+passwordOnKeyDown = event => {
+  savePassword.classList.add('hidden')
+  clearTimeout(passwordCheckTimeout)
+  passwordCheckTimeout = setTimeout(() => {
+    if (changePasswordInput.value === '' || confirmPasswordInput.value === '') {
+      menuDataElements.passwordError.classList.add('hidden')
+    } else if (changePasswordInput.value !== confirmPasswordInput.value) {
+      menuDataElements.passwordError.classList.remove('good')
+      menuDataElements.passwordError.innerText = 'Passwords do not match'
+      menuDataElements.passwordError.classList.remove('hidden')
+    } else {
+      menuPassword = changePasswordInput.value
+      menuDataElements.passwordError.classList.add('hidden')
+      savePassword.classList.remove('hidden')
+    }
+  }, 100)
+}
+
+changePasswordInput.addEventListener('keydown', passwordOnKeyDown)
+confirmPasswordInput.addEventListener('keydown', passwordOnKeyDown)
+
+savePassword.addEventListener('click', event => {
+  savePassword.classList.add('hidden')
+  if (menuPassword !== '') {
+    send({
+      type: 'command-password',
+      password: menuPassword,
+      view: 'menu',
+    })
+
+    // the following 3 lines should execute immediately for security reasons
+    menuPassword = ''
+    changePasswordInput.value = ''
+    confirmPasswordInput.value = ''
+    // end security lines
+  }
+})
+
+let kofiCheckTimeout = null
+
+kofiInput.addEventListener('keydown', event => {
+  saveKofi.classList.add('hidden')
+  clearTimeout(kofiCheckTimeout)
+  kofiCheckTimeout = setTimeout(() => {
+    if (kofiInput.value === '') {
+      menuDataElements.kofiError.classList.add('hidden')
+    } else if (validEmail(kofiInput.value)) {
+      menuKofi = kofiInput.value
+      menuDataElements.kofiError.classList.add('hidden')
+      saveKofi.classList.remove('hidden')
+    } else {
+      menuDataElements.kofiError.classList.remove('good')
+      menuDataElements.kofiError.innerText = 'Invalid email'
+      menuDataElements.kofiError.classList.remove('hidden')
+    }
+  }, 100)
+})
+
+saveKofi.addEventListener('click', event => {
+  saveKofi.classList.add('hidden')
+  if (menuKofi !== '') {
+    send({
+      type: 'command-kofi',
+      kofi: menuKofi,
+      view: 'menu',
+    })
+
+    // the following 2 lines should execute immediately for security reasons
+    menuKofi = ''
+    kofiInput.value = ''
+    // end security lines
+  }
+})
+
+showConnectionEvents.checked = data.showConnectionEvents
+showConnectionEvents.addEventListener('change', event => {
+  setData('showConnectionEvents', showConnectionEvents.checked)
+})
+
+messageScrollThreshold.value = data.messageScrollThreshold
+menuDataElements.messageScrollThreshold.innerText = `${messageScrollThreshold.value}px`
+
+messageScrollThreshold.addEventListener('input', event => {
+  setData('messageScrollThreshold', Number(messageScrollThreshold.value))
+  menuDataElements.messageScrollThreshold.innerText = `${messageScrollThreshold.value}px`
+})
+
+messages.addEventListener('contextmenu', event => {
+  if (data.moderator) {
+    const message = event.target.closest('.msg-group .msg')
+    if (message !== null) {
+      messageContextMenuOpen = true
+      messageContextMenu.dataset.id = message.id.replace('msg-', '')
+      messageContextMenu.style.left = event.clientX + 10 + 'px'
+      messageContextMenu.style.top = event.clientY + 'px'
+      messageContextMenu.classList.remove('hidden')
+      event.preventDefault()
+    }
+  }
+})
+
+messageContextMenu.addEventListener('click', event => {
+  if (messageContextMenuOpen) {
+    messageContextMenuOpen = false
+    messageContextMenu.classList.add('hidden')
+
+    if (messageContextMenu.dataset.id !== '') {
+      send({
+        type: 'command-delete-message',
+        id: messageContextMenu.dataset.id
+      })
+      messageContextMenu.dataset.id = ''
+    }
+    messageContextMenu.style.left = ''
+    messageContextMenu.style.top = ''
+  }
+})
+
+body.addEventListener('click', event => {
+  if (menuOpen && event.target.closest('#menu') === null) {
+    menuOpen = false
+    menu.classList.add('hidden')
+  }
+  if (messageContextMenuOpen && event.target.closest('#messageContextMenu') === null) {
+    messageContextMenuOpen = false
+    messageContextMenu.classList.add('hidden')
+    messageContextMenu.dataset.id = ''
+    messageContextMenu.style.left = ''
+    messageContextMenu.style.top = ''
+  }
+})
+
+window.addEventListener('resize', event => {
+  tryScrollFrom(messages.scrollHeight)
+})
+
 /* auto-connect */
 
-if (userData.server !== undefined) {
-  server = connect(userData.server)
+if (data.server !== undefined) {
+  server = connect(data.server)
 }
 
 /* From https://github.com/bluenviron/mediamtx/blob/main/internal/servers/webrtc/read_index.html */

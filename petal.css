@@ -1,9 +1,15 @@
 :root {
-  --dark: #202020;
-  --grey: rgba(255, 255, 255, 0.05);
-  --system-message: rgba(255, 255, 255, 0.5);
+  --darker: #202020;
+  --dark: #242424;
+  --lighten: rgba(255, 255, 255, 0.05);
+  --lightener: rgba(255, 255, 255, 0.25);
+  --lightenest: rgba(255, 255, 255, 0.5);
   --priv-message: #e8f1b1;
-  --priv-message-sent: #aaaaaa;
+  --grey: #aaaaaa;
+  --good: #9eff9e;
+  --darkGood: #424d42;
+  --bad: #ff8f8f;
+  --darkBad: #4b3d3d;
   --small: 0.5rem;
   --medium: 1rem;
   --large: 1.5rem;
@@ -14,7 +20,7 @@
   box-sizing: border-box;
   font-family: sans-serif;
   margin: 0;
-  scrollbar-color: var(--grey) var(--dark);
+  scrollbar-color: var(--lightenest) var(--lighten);
   scrollbar-width: thin;
 }
 
@@ -22,10 +28,10 @@
   width: var(--small);
 }
 ::-webkit-scrollbar-track {
-  background: var(--dark);
+  background-color: var(--darker);
 }
 ::-webkit-scrollbar-thumb, ::-webkit-scrollbar-thumb:hover {
-  background: var(--grey);
+  background-color: var(--lighten);
 }
 
 html {
@@ -36,12 +42,170 @@ html {
 a {
   color: inherit;
   text-decoration: none;
-  filter: hue-rotate(-90deg);
+}
+
+label {
+  cursor: pointer;
+  user-select: none;
+}
+
+code {
+	background-color: var(--lighten);
+  border: 1px solid var(--lightenest);
+  display: inline-block;
+  font-family: monospace;
+	padding: 2px 6px 1px;
+}
+
+button {
+  border: 1px solid var(--lightenest);
+  background-color: var(--lighten);
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 5px 6px 4px;
+}
+
+button:focus-visible, button:hover {
+  background-color: var(--lightener);
+  border-color: #ffffff;
+  color: #ffffff;
+  outline: none;
+}
+
+input {
+	background-color: var(--lighten);
+  border: none;
+	color: #ffffff;
+  font-size: 1rem;
+	padding: 5px 8px 4px;
+}
+
+input[type="range"] {
+  cursor: pointer;
+}
+
+input:focus-visible {
+  outline: 1px solid var(--lightenest);
+}
+
+select {
+	background-color: var(--lighten);
+  border: 1px solid var(--lightenest);
+	color: #ffffff;
+	cursor: pointer;
+  font-size: 1rem;
+}
+
+hr {
+	background-color: var(--lighten);
+  border: none;
+	height: 0.25rem;
+	margin: 0.5rem 0;
+}
+
+.hidden {
+  display: none !important;
+}
+.pb-xs {
+  padding-bottom: 0.25rem;
+}
+.pb-sm {
+  padding-bottom: 0.5rem;
+}
+.pb-md {
+  padding-bottom: 0.75rem;
+}
+.pb-lg {
+  padding-bottom: 1rem;
+}
+.pt-xs {
+  padding-top: 0.25rem;
+}
+.pt-sm {
+  padding-top: 0.5rem;
+}
+.pt-md {
+  padding-top: 0.75rem;
+}
+.pt-lg {
+  padding-top: 1rem;
+}
+.pb-xs {
+  padding-bottom: 0.25rem;
+}
+.mb-xs {
+  margin-bottom: 0.25rem;
+}
+.mb-sm {
+  margin-bottom: 0.5rem;
+}
+.mb-md {
+  margin-bottom: 0.75rem;
+}
+.mb-lg {
+  margin-bottom: 1rem;
+}
+.mt-xs {
+  margin-top: 0.25rem;
+}
+.mt-sm {
+  margin-top: 0.5rem;
+}
+.mt-md {
+  margin-top: 0.75rem;
+}
+.mt-lg {
+  margin-top: 1rem;
+}
+.ml-xs {
+  margin-left: 0.25rem;
+}
+.ml-sm {
+  margin-left: 0.5rem;
+}
+.ml-md {
+  margin-left: 0.75rem;
+}
+.ml-lg {
+  margin-left: 1rem;
+}
+.mr-xs {
+  margin-right: 0.25rem;
+}
+.mr-sm {
+  margin-right: 0.5rem;
+}
+.mr-md {
+  margin-right: 0.75rem;
+}
+.mr-lg {
+  margin-right: 1rem;
+}
+
+.smaller {
+  font-size: smaller;
+}
+
+.cursor-inherit {
+  cursor: inherit;
+}
+
+.bad {
+  background-color: var(--darkBad);
+  border-color: var(--bad);
+  color: var(--bad);
+}
+.good {
+  background-color: var(--darkGood);
+  border-color: var(--good);
+  color: var(--good);
 }
 
 #main {
   align-items: center;
-  background-color: var(--dark);
+  background-color: var(--darker);
   display: flex;
   flex-flow: column;
   height: 100vh;
@@ -65,11 +229,11 @@ a {
 
 #stream-info {
   align-items: center;
-  background-color: var(--grey);
+  background-color: var(--lighten);
   display: none;
   font-size: 2rem;
   top: calc(50% - 2rem);
-  color: var(--system-message);
+  color: var(--lightenest);
   padding: var(--small) var(--large);
   position: absolute;
   text-align: center;
@@ -88,21 +252,10 @@ a {
   height: calc(100vh - 56.25vw);
 }
 
-#chat, #entry, #messages {
-  background-color: var(--dark);
-  color: #FFFFFF;
+#chat, textarea, #messages {
+  background-color: var(--darker);
+  color: #ffffff;
   font-size: var(--medium);
-}
-
-#petal {
-  cursor: pointer;
-  font-size: 3rem;
-  right: 1.75rem;
-  bottom: calc(var(--entry-height) + var(--medium));
-  opacity: 0.5;
-  position: absolute;
-  user-select: none;
-  z-index: 1;
 }
 
 #messages {
@@ -111,20 +264,36 @@ a {
   position: relative;
 }
 
-#entry {
-  border: 0;
-  background-color: var(--grey);
+#messageContextMenu {
+  background-color: var(--dark);
+  color: #ffffff;
+  display: block;
+  padding-left: 0;
+  list-style-type: none;
+  position: absolute;
+  z-index: 1;
+}
+#messageContextMenu li {
+  border: 0.25rem solid var(--lighten);
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+}
+
+
+textarea {
+  border: 0.25rem solid var(--lighten);
   height: var(--entry-height);
   margin: 0;
   padding: 0.6875rem 0 0 0.75rem;
   resize: none;
   width: 100%;
 }
-#entry:focus {
+textarea:focus {
   outline: 0;
 }
 
 .msg-group {
+  background-color: var(--darker);
   padding: 0.75rem 0.5rem;
   display: flex;
   overflow-wrap: anywhere;
@@ -145,10 +314,12 @@ a {
   display: flex;
   flex-direction: column;
   padding-left: 0.5rem;
-  margin-top: -4px;
+  margin-top: -0.25rem;
+  width: 100%;
 }
 
 .msg-group .author {
+  color: var(--grey);
   cursor: pointer;
   font-weight: bold;
   width: max-content;
@@ -167,13 +338,105 @@ a {
 }
 
 .msg--system {
-  color: var(--system-message);
+  color: var(--lightenest);
 }
 .msg--priv-message {
   color: var(--priv-message);
 }
 .msg--priv-message-sent {
-  color: var(--priv-message-sent);
+  color: var(--grey);
+}
+
+#petal {
+  cursor: pointer;
+  font-size: 3rem;
+  right: 1.75rem;
+  bottom: calc(var(--entry-height) + var(--medium));
+  opacity: 0.5;
+  position: absolute;
+  user-select: none;
+  z-index: 1;
+}
+
+#menu {
+  background-color: var(--dark);
+  border: 0.25rem solid var(--lighten);
+  bottom: calc(var(--entry-height) + 6rem);
+  display: block;
+  height: 40vh;
+	position: absolute;
+  right: 6%;
+  width: 88%;
+  z-index: 2;
+}
+
+#menuTabs {
+	display: flex;
+	border-bottom: 0.25rem solid var(--lighten);
+}
+.menuTab {
+  color: var(--lightenest);
+	cursor: pointer;
+  letter-spacing: 1px;
+  padding: 1rem 0.8rem;
+  user-select: none;
+}
+.menuTab.active {
+  background-color: var(--lighten);
+  color: #ffffff;
+}
+
+#menuPages {
+  height: calc(40vh - 4rem);
+  overflow-y: auto;
+  max-width: 100%;
+  padding: 1rem;
+}
+.menuPage {
+  display: none;
+}
+.menuPage.active {
+  display: block;
+}
+
+#userProfileNameRow {
+  display: flex;
+  gap: 0.5rem;
+}
+#userProfileName {
+  cursor: pointer;
+  position: relative;
+}
+#userProfileName:focus-visible {
+  outline: none;
+}
+#userProfileName:hover {
+  text-decoration: none;
+}
+#userProfileName::after {
+  content: '🖉';
+  font-size: 1rem;
+  position: absolute;
+  right: -1.25rem;
+  top: 0;
+}
+#changeAvatar.cursor-inherit, #userProfileName.cursor-inherit {
+  cursor: inherit;
+}
+#userProfileName.frozen::after {
+  display: none;
+}
+#nameColor, #messageColor, #backgroundColor {
+  background: none;
+  height: 1rem;
+  padding: 0;
+	position: absolute;
+	width: 0;
+}
+
+#profileBio {
+  min-height: 7.75rem;
+  max-width: 320px;
 }
 
 @media (min-width: 769px) {
@@ -186,7 +449,8 @@ a {
   }
   #stream-wrapper + #chat {
     height: 100%;
-    max-width: 25%;
+    min-width: 322px;
+    width: 25%;
   }
   #chat {
     padding: 0;
@@ -194,6 +458,23 @@ a {
   #petal {
     bottom: var(--entry-height);
     right: 0.75rem;
+  }
+  #menu {
+    bottom: calc(var(--entry-height) + 4.25rem);
+    height: 50vh;
+    right: 0;
+  }
+  #menuPages {
+    height: calc(50vh - 4rem);
+  }
+  #menu {
+    width: 480px;
+    right: calc(50% - 240px);
+  }
+  #stream-wrapper + #chat #menu {
+    min-width: 306px;
+    right: 5%;
+    width: 90%;
   }
   #messages > .msg {
     padding: var(--small) 0.5rem;
@@ -217,6 +498,12 @@ a {
   }
   #main {
     padding: var(--large);
+  }
+  #stream-wrapper + #chat {
+    min-width: 460px;
+  }
+  .menuTab {
+    padding: 1rem 0.8rem;
   }
   #stream-wrapper {
     margin-right: var(--large);

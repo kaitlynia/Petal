@@ -898,7 +898,7 @@ const payloadHandlers = {
     if (isModerator(sock.token) && payload.id !== undefined) {
       data.messageHistory.forEach(message => {
         if (payload.id === message.id) {
-          message.body = '<message deleted>'
+          message.body = '[message deleted]'
         }
       })
       saveData()

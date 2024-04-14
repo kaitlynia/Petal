@@ -4,16 +4,91 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
     <link rel="shortcut icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/coloris.min.css">
     <link rel="stylesheet" href="/petal.css">
     <title>Petal</title>
   </head>
   <body id="main">
     <div id="chat">
       <i id="petal">&#x1F33A;</i>
+      <div id="menu" class="hidden">
+        <div id="menuTabs">
+          <div id="profileTab" class="menuTab active" data-page="profilePage">Profile</div>
+          <div id="statsTab" class="menuTab" data-page="statsPage">Stats</div>
+          <div id="inventoryTab" class="menuTab" data-page="inventoryPage">Inventory</div>
+          <div id="settingsTab" class="menuTab" data-page="settingsPage">Settings</div>
+        </div>
+        <div id="menuPages">
+          <div id="profilePage" class="menuPage active">
+            <div id="userProfile" class="msg-group mb-sm" data-profile-background>
+              <img id="changeAvatar" class="avatar cursor-inherit" src="/avatars/anon.png" data-profile-avatar>
+              <div class="col">
+                <div id="userProfileNameRow"><div id="userProfileName" class="author" autocomplete="off" autocorrect="off" spellcheck="false" data-profile-name>anon</div></div>
+                <div id="userProfileMessage" class="msg" data-profile-message>test message!</div>
+              </div>
+            </div>
+            <input id="nameColor" type="text" data-coloris><button id="changeNameColor" class="mt-sm ml-xs mb-sm hidden">Name color</button><input id="messageColor" type="text" data-coloris><button id="changeMessageColor" class="ml-xs mb-sm hidden">Message color</button><input id="backgroundColor" type="text" data-coloris><button id="changeBackgroundColor" class="ml-xs mb-sm hidden">Background color</button><br>
+            <div class="ml-xs mb-sm">
+              <input id="enterPassword" class="hidden mr-sm" type="password" placeholder="Enter password">
+              <button id="saveProfile" class="good hidden">Save</button>
+              <button id="resetProfile" class="bad hidden">Reset</button>
+              <code class="bad hidden" data-profile-error></code>
+            </div>
+            <!-- <hr class="mt-md mb-md">
+            <label for="profileBio">Profile bio</label><br>
+            <textarea id="profileBio" class="ml-xs mt-md mb-sm"></textarea><br>
+            <button id="saveBio" class="ml-xs good hidden">Save</button> -->
+          </div>
+          <div id="statsPage" class="menuPage">
+            <p><span class="currencyName">Petal</span>s: <b data-stats-currency>0</b><span class="currencyEmoji">&#x1F33A;</span></p>
+            <p><span class="premiumCurrencyName">Blossom</span>s: <b data-stats-premium-currency>0</b><span class="premiumCurrencyEmoji">&#x1F338;</span></p>
+            <hr class="mt-md mb-md">
+            <p>Total <span class="currencyName">Petal</span>s earned: <b data-stats-currency-earned>0</b><span class="currencyEmoji">&#x1F33A;</span> (<b data-stats-currency-earned-from-sub>0</b> from sub bonus)</p>
+            <p>Total <span class="premiumCurrencyName">Blossom</span>s earned: <b><span data-stats-premium-currency-earned>0</span></b><span class="premiumCurrencyEmoji">&#x1F338;</span> (<b data-stats-premium-currency-claimed>0</b> from sub/donations)</p>
+            <hr class="mt-md mb-md">
+            <p>Sub status: <span data-stats-sub-status>inactive</span></p>
+            <div class="hidden" data-stats-sub-only>
+              <p>Subbed until: <span data-stats-sub-time></span></p>
+              <p>Sub streak: <span data-stats-sub-streak></span></p>
+            </div>
+            <hr class="mt-md mb-md">
+            <p>Sub months total: <span data-stats-months-subbed>0</span></p>
+            <p>Sub total: $<span data-stats-subs-total>0</span></p>
+            <p>Donations: $<span data-stats-donations>0</span></p>
+            <p>Total: $<span data-stats-kofi-total>0</span></p>
+          </div>
+          <div id="inventoryPage" class="menuPage">
+            Inventory update coming soon...
+          </div>
+          <div id="settingsPage" class="menuPage">
+            <label for="changePassword">Change password</label><br>
+            <input id="changePassword" class="ml-xs mt-sm mb-xs" type="password" placeholder="Enter password"><br>
+            <input id="confirmPassword" class="ml-xs mb-sm" type="password" placeholder="Confirm password"><code class="bad ml-sm hidden" data-password-error>Passwords do not match</code><button id="savePassword" class="ml-sm good hidden">Save</button>
+            <hr>
+            <label for="kofi">Update Ko-fi email</label><br>
+            <input id="kofi" class="ml-xs mt-sm mb-sm" type="email" placeholder="kofi@example.com"><code class="bad ml-sm hidden" data-kofi-error>Invalid email</code><button id="saveKofi" class="ml-sm good hidden">Save</button>
+            <hr>
+            <p class="mb-sm">Client settings</p>
+            <div class="smaller">
+              <label for="theme" class="ml-xs">Theme:</label>
+              <select id="theme" class="mb-xs">
+                <option value="dark" selected>Dark</option>
+              </select><br>
+              <label for="messageScrollThreshold" class="ml-xs">Message scroll threshold:</label> <span data-message-scroll-threshold>250px</span><br>
+              <input type="range" id="messageScrollThreshold" class="ml-xs mr-xs" min="0" step="10" value="250" max="500"><br>
+              <label for="showConnectionEvents" class="ml-xs">Show connection events:</label> <input id="showConnectionEvents" type="checkbox" checked>
+            </div>
+          </div>
+        </div>
+      </div>
       <div id="messages"></div>
       <textarea id="entry"></textarea>
     </div>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.3.4/purify.min.js"></script>
+    <ul id="messageContextMenu" class="hidden bad" data-id="">
+      <li class="bad">Delete message</li>
+    </ul>
+    <script src="/purify.min.js"></script>
+    <script src="/coloris.min.js"></script>
     <script src="/petal.js"></script>
   </body>
 </html>
