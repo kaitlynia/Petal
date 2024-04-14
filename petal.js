@@ -1438,7 +1438,7 @@ messageContextMenu.addEventListener('click', event => {
 })
 
 body.addEventListener('click', event => {
-  if (menuOpen && event.target.closest('#menu') === null) {
+  if (menuOpen && event.target.closest('#menu, #clr-picker') === null) {
     menuOpen = false
     menu.classList.add('hidden')
   }
