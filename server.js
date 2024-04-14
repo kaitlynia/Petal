@@ -148,12 +148,12 @@ const aggregateKofiData = token => {
   } else {
     return {
       subStatus: hasPetalPlus(token),
-      subTime: kofiSubTime[kofi] || 0,
-      subStreak: kofiSubStreak[kofi] || 0,
-      monthsSubbed: kofiMonthsSubbed[kofi] || 0,
-      subsTotal: kofiSubsTotal[kofi] || 0,
-      donations: kofiDonations[kofi] || 0,
-      total: kofiTotal[kofi] || 0,
+      subTime: data.kofiSubTime[kofi] || 0,
+      subStreak: data.kofiSubStreak[kofi] || 0,
+      monthsSubbed: data.kofiMonthsSubbed[kofi] || 0,
+      subsTotal: data.kofiSubsTotal[kofi] || 0,
+      donations: data.kofiDonations[kofi] || 0,
+      total: data.kofiTotal[kofi] || 0,
     }
   }
 }
@@ -281,7 +281,7 @@ const authToken = (sock, token, name, newName=false) => {
       nameColor: sock.nameColor,
       textColor: sock.textColor,
       bgColor: sock.bgColor,
-      hasAvatar: data.nameAvatar[sock.name] !== undefined,
+      avatar: data.nameAvatar[sock.name] || 'anon.png',
       stats: data.tokenStats[sock.token] || {},
       kofi: aggregateKofiData(sock.token),
       history: getHistory(),
@@ -354,7 +354,15 @@ const hashPassword = (password, callback) => {
 
 const getParticipants = () => [...socks].map(s => s.name)
 const getHistory = () => {
-  return data.messageHistory.slice(data.messageHistoryIndex).concat(...data.messageHistory.slice(0, data.messageHistoryIndex))
+  const rawHistory = data.messageHistory.slice(data.messageHistoryIndex).concat(...data.messageHistory.slice(0, data.messageHistoryIndex))
+  return rawHistory.map(message => { return {
+    avatar: data.nameAvatar[message.name] || 'anon.png',
+    name: message.name,
+    nameColor: data.nameColor[message.name] || defaultNameColor,
+    textColor: data.textColor[message.name] || defaultTextColor,
+    bgColor: data.bgColor[message.name] || defaultBgColor,
+    body: message.body,
+  }})
 }
 
 const payloadHandlers = {
@@ -363,7 +371,8 @@ const payloadHandlers = {
       // name already exists, notify client
       sockSend(sock, {
         type: 'auth-exists',
-        name: payload.name
+        name: payload.name,
+        view: payload.view,
       })
     } else if (validName(payload.name)) {
       if (sock.token !== undefined) {
@@ -376,12 +385,14 @@ const payloadHandlers = {
         sockSend(sock, {
           type: 'auth-new',
           name: payload.name,
-          token: sock.auth_pair.token
+          token: sock.auth_pair.token,
+          view: payload.view,
         })
       }
     } else {
       sockSend(sock, {
-        type: 'auth-name-invalid'
+        type: 'auth-name-invalid',
+        view: payload.view,
       })
     }
   },
@@ -410,17 +421,19 @@ const payloadHandlers = {
             nameColor: sock.nameColor,
             textColor: sock.textColor,
             bgColor: sock.bgColor,
-            hasAvatar: data.nameAvatar[sock.name] !== undefined,
+            avatar: data.nameAvatar[sock.name] !== 'anon.png',
             stats: data.tokenStats[sock.token] || {},
             kofi: aggregateKofiData(sock.token),
             history: getHistory(),
-            participants: getParticipants()
+            participants: getParticipants(),
+            view: payload.view,
           })
           updateParticipants(sock, 'joined')
         } else {
           sockSend(sock, {
             type: 'auth-fail-password',
-            name: payload.name
+            name: payload.name,
+            view: payload.view,
           })
         }
       })
@@ -449,24 +462,34 @@ const payloadHandlers = {
   },
   'avatar-upload': (sock, payload) => {
     if (sock.token !== undefined) {
-      fs.writeFile(`/var/www/html/avatars/${sock.name}.png`, payload.data.replace('data:image/png;base64,', ''), 'base64', err => {
+      const avatar = crypto.randomUUID() + '.png'
+      fs.writeFile(`/var/www/html/avatars/${avatar}`, payload.data.replace('data:image/png;base64,', ''), 'base64', err => {
         if (err) {
           sockSend(sock, {
             type: 'avatar-upload-fail',
-            reason: err.toString()
+            reason: err.toString(),
+            view: payload.view
           })
         } else {
-          data.nameAvatar[sock.name] = true
+          const oldAvatar = data.nameAvatar[sock.name]
+          if (oldAvatar !== undefined) {
+            fs.unlink(`/var/www/html/avatars/${oldAvatar}`, (err) => {
+              if (err) throw err;
+            })
+          }
+          data.nameAvatar[sock.name] = avatar
           saveData()
 
           sockSend(sock, {
-            type: 'avatar-upload-ok'
+            type: 'avatar-upload-ok',
+            avatar: avatar,
           })
         }
       })
     } else {
       sockSend(sock, {
-        type: 'avatar-upload-auth-required'
+        type: 'avatar-upload-auth-required',
+        view: payload.view
       })
     }
   },
@@ -528,7 +551,7 @@ const payloadHandlers = {
 
       const message = {
         type: 'message',
-        hasAvatar: data.nameAvatar[sock.name] !== undefined,
+        avatar: data.nameAvatar[sock.name] || 'anon.png',
         name: sock.name,
         nameColor: sock.nameColor,
         textColor: sock.textColor,
@@ -536,7 +559,7 @@ const payloadHandlers = {
         body: cleanBody
       }
 
-      data.messageHistory[data.messageHistoryIndex] = message
+      data.messageHistory[data.messageHistoryIndex] = {name: sock.name, body: cleanBody}
 
       if (data.messageHistoryIndex + 1 >= maxMessageHistory) {
         data.messageHistoryIndex = 0
@@ -556,12 +579,14 @@ const payloadHandlers = {
         data.tokenHash[sock.token] = hash
         saveData()
         sockSend(sock, {
-          type: 'command-password-ok'
+          type: 'command-password-ok',
+          view: payload.view,
         })
       })
     } else {
       sockSend(sock, {
-        type: 'command-password-auth-required'
+        type: 'command-password-auth-required',
+        view: payload.view,
       })
     }
   },
@@ -754,37 +779,61 @@ const payloadHandlers = {
           delete data.nameToken[sock.name]
           data.nameToken[payload.name] = sock.token
           data.tokenNames[sock.token] = [...data.tokenNames[sock.token].filter(n => n !== sock.name), payload.name]
-          if (data.nameAvatar[sock.name] === true) {
-            fs.rename(`/var/www/html/avatars/${sock.name}.png`, `/var/www/html/avatars/${payload.name}.png`, err => {
-              if (err) {
-                sockSend(sock, {
-                  type: 'avatar-upload-fail',
-                  reason: err.toString()
-                })
+
+          let avatar = data.nameAvatar[sock.name] || 'anon.png'
+          if (avatar !== 'anon.png') {
+            const newAvatar = crypto.randomUUID() + '.png'
+            fs.rename(`/var/www/html/avatars/${avatar}`, `/var/www/html/avatars/${newAvatar}`, err => {
+              if (err) throw err
+              avatar = data.nameAvatar[sock.name] = newAvatar
+            })
+          }
+
+          delete data.nameColor[sock.name]
+          sock.nameColor = data.nameColor[payload.name] = payload.nameColor
+          delete data.nameTextColor[sock.name]
+          sock.textColor = data.nameTextColor[payload.name] = payload.textColor
+          delete data.nameBgColor[sock.name]
+          sock.bgColor = data.nameBgColor[payload.name] = payload.bgColor
+          sock.name = payload.name
+
+
+          if (sock.name !== payload.name) {
+            data.messageHistory.forEach((message, index) => {
+              if (sock.name === message.name) {
+                data.messageHistory[index] = {name: payload.name, body: message.body};
               }
             })
-            data.nameAvatar[payload.name] === true
-          } else {
-            data.nameAvatar[payload.name] === false
           }
-          delete data.nameAvatar[sock.name]
-          delete data.nameColor[sock.name]
-          data.nameColor[payload.name] = payload.nameColor
-          delete data.nameTextColor[sock.name]
-          data.nameTextColor[payload.name] = payload.textColor
-          delete data.nameBgColor[sock.name]
-          data.nameBgColor[payload.name] = payload.bgColor
+
           sock.name = payload.name
           saveData()
+
+          sockSend(sock, {
+            type: 'command-profile-ok',
+            avatar: avatar,
+            name: sock.name,
+            nameColor: sock.nameColor,
+            textColor: sock.textColor,
+            bgColor: sock.bgColor,
+            view: payload.view,
+          })
+        } else {
+          sockSend(sock, {
+            type: 'command-colors-invalid',
+            view: payload.view,
+          })
         }
       } else {
         sockSend(sock, {
-          type: 'command-name-invalid'
+          type: 'command-profile-invalid-name',
+          view: payload.view,
         })
       }
     } else {
       sockSend(sock, {
-        type: 'command-profile-auth-required'
+        type: 'command-profile-auth-required',
+        view: payload.view,
       })
     }
   },
@@ -841,7 +890,7 @@ const payloadHandlers = {
         type: 'command-stats-ok',
         stats: data.tokenStats[sock.token] || {},
         kofi: aggregateKofiData(sock.token),
-        view: payload.view || 'stats'
+        statsView: payload.statsView || 'stats'
       })
     } else {
       sockSend(sock, {
