@@ -763,43 +763,51 @@ const payloadHandlers = {
   'command-profile': (sock, payload) => {
     if (sock.token !== undefined) {
       if (payload.name !== undefined && validName(payload.name)) {
-        const valid = handleColorsPayload(sock, payload)
-        if (valid) {
-          if (payload.name !== sock.name) {
-            delete data.nameToken[sock.name]
-            data.nameToken[payload.name] = sock.token
-            data.tokenNames[sock.token] = [...data.tokenNames[sock.token].filter(n => n !== sock.name), payload.name]
-            data.nameAvatar[payload.name] = data.nameAvatar[sock.name] || 'anon.png'
-            delete data.nameAvatar[sock.name]
-          }
-          delete data.nameColor[sock.name]
-          sock.nameColor = data.nameColor[payload.name] = payload.nameColor
-          delete data.nameTextColor[sock.name]
-          sock.textColor = data.nameTextColor[payload.name] = payload.textColor
-          delete data.nameBgColor[sock.name]
-          sock.bgColor = data.nameBgColor[payload.name] = payload.bgColor
-          sock.name = payload.name
-
-          if (sock.name !== payload.name) {
-            data.messageHistory.forEach((message, index) => {
-              if (sock.name === message.name) {
-                data.messageHistory[index] = {name: payload.name, body: message.body};
-              }
-            })
-          }
-
+        if (data.nameToken[payload.name] !== undefined) {
           sockSend(sock, {
-            type: 'command-profile-ok',
-            avatar: data.nameAvatar[payload.name] || 'anon.png',
+            type: 'auth-exists',
             name: payload.name,
-            nameColor: payload.nameColor,
-            textColor: payload.textColor,
-            bgColor: payload.bgColor,
             view: payload.view,
           })
+        } else {
+          const valid = handleColorsPayload(sock, payload)
+          if (valid) {
+            if (payload.name !== sock.name) {
+              delete data.nameToken[sock.name]
+              data.nameToken[payload.name] = sock.token
+              data.tokenNames[sock.token] = [...data.tokenNames[sock.token].filter(n => n !== sock.name), payload.name]
+              data.nameAvatar[payload.name] = data.nameAvatar[sock.name]
+              delete data.nameAvatar[sock.name]
+            }
+            delete data.nameColor[sock.name]
+            sock.nameColor = data.nameColor[payload.name] = payload.nameColor
+            delete data.nameTextColor[sock.name]
+            sock.textColor = data.nameTextColor[payload.name] = payload.textColor
+            delete data.nameBgColor[sock.name]
+            sock.bgColor = data.nameBgColor[payload.name] = payload.bgColor
+            sock.name = payload.name
 
-          sock.name = payload.name
-          saveData()
+            if (sock.name !== payload.name) {
+              data.messageHistory.forEach((message, index) => {
+                if (sock.name === message.name) {
+                  data.messageHistory[index] = {name: payload.name, body: message.body};
+                }
+              })
+            }
+
+            sockSend(sock, {
+              type: 'command-profile-ok',
+              avatar: data.nameAvatar[payload.name] || 'anon.png',
+              name: payload.name,
+              nameColor: payload.nameColor,
+              textColor: payload.textColor,
+              bgColor: payload.bgColor,
+              view: payload.view,
+            })
+
+            sock.name = payload.name
+            saveData()
+          }
         }
       } else {
         sockSend(sock, {
