@@ -355,14 +355,17 @@ const hashPassword = (password, callback) => {
 const getParticipants = () => [...socks].map(s => s.name)
 const getHistory = () => {
   const rawHistory = data.messageHistory.slice(data.messageHistoryIndex).concat(...data.messageHistory.slice(0, data.messageHistoryIndex))
-  return rawHistory.map(message => { return {
-    avatar: data.nameAvatar[message.name] || 'anon.png',
-    name: message.name,
-    nameColor: data.nameColor[message.name] || defaultNameColor,
-    textColor: data.nameTextColor[message.name] || defaultTextColor,
-    bgColor: data.nameBgColor[message.name] || defaultBgColor,
-    body: message.body,
-  }})
+  return rawHistory.map(message => {
+    const token = data.nameToken[message.name]
+    return {
+      avatar: data.nameAvatar[message.name] || 'anon.png',
+      name: message.name,
+      nameColor: data.nameColor[message.name] || defaultNameColor,
+      textColor: hasPetalPlus(token) ? data.nameTextColor[message.name] || defaultTextColor : defaultTextColor,
+      bgColor: hasPetalPlus(token) ? data.nameBgColor[message.name] || defaultBgColor : defaultBgColor,
+      body: message.body,
+    }
+  })
 }
 
 const payloadHandlers = {
