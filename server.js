@@ -876,10 +876,10 @@ const payloadHandlers = {
   },
   'command-data': (sock, payload) => {
     if (sock.token === data.broadcaster) {
-      if (args) {
+      if (payload.data) {
         sockSend(sock, {
           type: 'command-data-ok',
-          data: data[args]
+          data: data[payload.data]
         })
       } else {
         sockSend(sock, {
