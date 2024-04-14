@@ -39,6 +39,7 @@ let messageLookup = new Map()
 
 let data = {
   broadcaster: '',
+  moderators: [],
   cert: 'fullchain.pem',
   key: 'privkey.pem',
   port: 8080,
@@ -87,11 +88,6 @@ const luminance = hex => {
       : Math.pow((v + 0.055) / 1.055, 2.4)
   }
   return a(hex.slice(1,3)) * 0.2126 + a(hex.slice(3,5)) * 0.7152 + a(hex.slice(5,7)) * 0.0722
-}
-
-const rgbToHex = rgb => {
-  if (rgb.charAt(0) === '#') return rgb
-  return '#' + rgb.replace('rgb(', '').replace(')', '').split(',').map(s => ('0'+Number(s).toString(16)).slice(-2)).join('')
 }
 
 const textBackgroundContrast = (text, background) => {
@@ -201,6 +197,10 @@ const timeUntilNextDay = time => {
   return Date.UTC(nextDay.getUTCFullYear(), nextDay.getUTCMonth(), nextDay.getUTCDate()) - Date.now()
 }
 
+const isModerator = token => {
+  return token === data.broadcaster || data.moderators.includes(token)
+}
+
 const sockSend = (sock, payload) => sock.send(JSON.stringify(payload))
 const tryTokenSend = (token, payload) => {
   const sock = [...socks].find(s => s.token === token)
@@ -297,6 +297,7 @@ const authToken = (sock, token, name, newName=false) => {
       avatar: data.nameAvatar[sock.name] || 'anon.png',
       stats: data.tokenStats[sock.token] || {},
       kofi: aggregateKofiData(sock.token),
+      moderator: isModerator(sock.token),
       history: getHistory(),
       participants: getParticipants()
     })
@@ -425,6 +426,7 @@ const payloadHandlers = {
             avatar: data.nameAvatar[sock.name] || 'anon.png',
             stats: data.tokenStats[sock.token] || {},
             kofi: aggregateKofiData(sock.token),
+            moderator: isModerator(sock.token),
             history: getHistory(),
             participants: getParticipants(),
             view: payload.view,
@@ -892,7 +894,18 @@ const payloadHandlers = {
     }
   },
   'command-delete-message': (sock, payload) => {
-    //
+    if (isModerator(sock.token) && payload.id !== undefined) {
+      const messageStr = JSON.stringify({
+        type: 'delete-message',
+        id: payload.id
+      })
+      data.messageHistory.forEach((message, index) => {
+        if (payload.id === message.id) {
+          data.messageHistory[index] = {id: message.id, name: message.name, body: '<message deleted>'}
+        }
+      })
+      socks.forEach(s => s.send(messageStr))
+    }
   },
   'command-data': (sock, payload) => {
     if (sock.token === data.broadcaster) {
