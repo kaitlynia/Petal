@@ -896,16 +896,38 @@ const payloadHandlers = {
   },
   'command-delete-message': (sock, payload) => {
     if (isModerator(sock.token) && payload.id !== undefined) {
-      const messageStr = JSON.stringify({
-        type: 'delete-message',
-        id: payload.id
-      })
       data.messageHistory.forEach((message, index) => {
         if (payload.id === message.id) {
           data.messageHistory[index] = {id: message.id, name: message.name, body: '<message deleted>'}
         }
       })
+      saveData()
+
+      const messageStr = JSON.stringify({
+        type: 'delete-message',
+        id: payload.id
+      })
       socks.forEach(s => s.send(messageStr))
+    }
+  },
+  'command-addmod': (sock, payload) => {
+    if (sock.token === data.broadcaster) {
+      if (payload.name !== undefined) {
+        const token = data.nameToken[payload.name]
+        if (token !== undefined) {
+          data.moderators.push(token)
+          saveData()
+
+          sockSend(sock, {
+            type: 'command-addmod-ok',
+            name: payload.name
+          })
+        }
+      }
+    } else {
+      sockSend(sock, {
+        type: 'command-unauthorized'
+      })
     }
   },
   'command-data': (sock, payload) => {
@@ -918,7 +940,7 @@ const payloadHandlers = {
       }
     } else {
       sockSend(sock, {
-        type: 'command-data-unauthorized'
+        type: 'command-unauthorized'
       })
     }
   }
