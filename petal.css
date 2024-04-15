@@ -414,11 +414,13 @@ textarea:focus {
   text-decoration: none;
 }
 #userProfileName::after {
-  content: '🖉';
-  font-size: 1rem;
-  position: absolute;
-  right: -1.25rem;
-  top: 0;
+	content: url(edit.svg);
+	font-size: 1rem;
+	position: absolute;
+	right: -1.75rem;
+	top: -0.25rem;
+	padding: 0.25rem;
+  stroke: inherit;
 }
 #changeAvatar.cursor-inherit, #userProfileName.cursor-inherit {
   cursor: inherit;

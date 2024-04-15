@@ -443,6 +443,9 @@ const payloadHandlers = {
   'auth-new-ok': payload => {
     setData('token', data.token)
     setData('name', payload.name)
+    changeAvatar.addEventListener('click', changeAvatarOnClick)
+    menuDataElements.name.innerText = payload.name
+    nameColorButton.classList.remove('hidden')
     loggedIn = true
     addHistory(payload.history)
     payloadHandlers['participants-ok'](payload)
