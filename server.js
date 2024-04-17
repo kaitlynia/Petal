@@ -250,10 +250,12 @@ const https_server = https.createServer({
 }, (req, res) => {
   if (req.method === 'POST') {
     req.on('data', data => {
-      const payload = JSON.parse(querystring.parse(data.toString()).data)
+      const payloadStr = querystring.parse(data.toString()).data
+      if (payloadStr !== undefined) {
+        kofiHandler(JSON.parse(payloadStr))
+      }
       res.writeHead(200)
       res.end()
-      kofiHandler(payload)
     })
   }
 })
