@@ -10,6 +10,7 @@
   </head>
   <body id="main">
     <div id="chat">
+      <div id="backToLatest" class="hidden">Back to latest message</div>
       <i id="petal">&#x1F33A;</i>
       <div id="menu" class="hidden">
         <div id="menuTabs">
@@ -35,12 +36,12 @@
                 <div id="userProfileMessage" class="msg" data-profile-message>test message!</div>
               </div>
             </div>
-            <input id="nameColor" type="text" data-coloris><button id="changeNameColor" class="mt-sm ml-xs mb-sm hidden">Name color</button><input id="messageColor" type="text" data-coloris><button id="changeMessageColor" class="ml-xs mb-sm hidden">Message color</button><input id="backgroundColor" type="text" data-coloris><button id="changeBackgroundColor" class="ml-xs mb-sm hidden">Background color</button><br>
-            <div class="ml-xs mb-sm">
+            <input id="nameColor" type="text" data-coloris><input id="messageColor" type="text" data-coloris><input id="backgroundColor" type="text" data-coloris><button id="changeNameColor" class="mt-sm mb-sm hidden">Name color</button><button id="changeMessageColor" class="ml-xs mb-sm hidden">Message color</button><button id="changeBackgroundColor" class="ml-xs mb-sm hidden">Background color</button><br>
+            <div class="mb-sm">
               <input id="enterPassword" class="hidden mr-sm" type="password" placeholder="Enter password">
               <button id="saveProfile" class="good hidden">Save</button>
               <button id="resetProfile" class="bad hidden">Reset</button>
-              <code class="bad hidden" data-profile-error></code>
+              <div class="menuInfoText hidden" data-profile-error></div>
             </div>
             <!-- <hr class="mt-md mb-md">
             <label for="profileBio">Profile bio</label><br>
@@ -71,10 +72,10 @@
           <div id="settingsPage" class="menuPage">
             <label for="changePassword">Change password</label><br>
             <input id="changePassword" class="ml-xs mt-sm mb-xs" type="password" placeholder="Enter password"><br>
-            <input id="confirmPassword" class="ml-xs mb-sm" type="password" placeholder="Confirm password"><code class="bad ml-sm hidden" data-password-error>Passwords do not match</code><button id="savePassword" class="ml-sm good hidden">Save</button>
+            <input id="confirmPassword" class="ml-xs mb-sm" type="password" placeholder="Confirm password"><div class="menuInfoText ml-sm hidden" data-password-error>Passwords do not match</div><button id="savePassword" class="ml-sm good hidden">Save</button>
             <hr>
             <label for="kofi">Update Ko-fi email</label><br>
-            <input id="kofi" class="ml-xs mt-sm mb-sm" type="email" placeholder="kofi@example.com"><code class="bad ml-sm hidden" data-kofi-error>Invalid email</code><button id="saveKofi" class="ml-sm good hidden">Save</button>
+            <input id="kofi" class="ml-xs mt-sm mb-sm" type="email" placeholder="kofi@example.com"><div class="menuInfoText ml-sm hidden" data-kofi-error>Invalid email</div><button id="saveKofi" class="ml-sm good hidden">Save</button>
             <hr>
             <p class="mb-sm">Client settings</p>
             <div class="smaller">
@@ -82,7 +83,7 @@
               <select id="theme" class="mb-xs">
                 <option value="dark" selected>Dark</option>
               </select><br>
-              <label for="messageScrollThreshold" class="ml-xs">Message scroll threshold:</label> <span data-message-scroll-threshold>250px</span><br>
+              <label for="messageScrollThreshold" class="ml-xs">Scroll threshold:</label> <span data-message-scroll-threshold>250px</span><br>
               <input type="range" id="messageScrollThreshold" class="ml-xs mr-xs" min="0" step="10" value="250" max="500"><br>
               <label for="showConnectionEvents" class="ml-xs">Show connection events:</label> <input id="showConnectionEvents" type="checkbox" checked>
             </div>

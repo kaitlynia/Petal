@@ -1,11 +1,12 @@
 :root {
   --darker: #202020;
-  --dark: #242424;
-  --lighten: rgba(255, 255, 255, 0.05);
-  --lightener: rgba(255, 255, 255, 0.25);
-  --lightenest: rgba(255, 255, 255, 0.5);
+  --dark: #262626;
+  --lighten: rgba(255, 255, 255, 0.1);
+  --lightener: rgba(255, 255, 255, 0.3);
+  --lightenest: rgba(255, 255, 255, 0.6);
   --priv-message: #e8f1b1;
   --grey: #aaaaaa;
+  --lightgrey: #dddddd;
   --good: #9eff9e;
   --darkGood: #424d42;
   --bad: #ff8f8f;
@@ -47,14 +48,6 @@ a {
 label {
   cursor: pointer;
   user-select: none;
-}
-
-code {
-	background-color: var(--lighten);
-  border: 1px solid var(--lightenest);
-  display: inline-block;
-  font-family: monospace;
-	padding: 2px 6px 1px;
 }
 
 button {
@@ -348,13 +341,28 @@ textarea:focus {
 }
 
 #petal {
+  bottom: calc(var(--entry-height) + var(--medium));
   cursor: pointer;
   font-size: 3rem;
-  right: 1.75rem;
-  bottom: calc(var(--entry-height) + var(--medium));
   opacity: 0.5;
   position: absolute;
+  right: 1.75rem;
   user-select: none;
+  z-index: 1;
+}
+
+#backToLatest {
+  background-color: var(--dark);
+  border: 1px solid var(--lightener);
+  bottom: calc(var(--entry-height) + var(--large));
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.5rem;
+  position: absolute;
+  left: calc(50% - 120px);
+  text-align: center;
+  user-select: none;
+  width: 240px;
   z-index: 1;
 }
 
@@ -363,7 +371,7 @@ textarea:focus {
   border: 0.25rem solid var(--lighten);
   bottom: calc(var(--entry-height) + 6rem);
   display: block;
-  height: 40vh;
+  height: 50vh;
 	position: absolute;
   right: 6%;
   width: 88%;
@@ -417,7 +425,7 @@ textarea:focus {
   height: 1.5rem;
   opacity: 0.5;
   padding: 0.1rem 0.25rem;
-  width: 1.5rem;
+  width: 1.75rem;
 }
 #changeAvatar.cursor-inherit, #userProfileName.cursor-inherit {
   cursor: inherit;
@@ -431,6 +439,22 @@ textarea:focus {
   padding: 0;
 	position: absolute;
 	width: 0;
+}
+#changeNameColor.active, #changeMessageColor.active, #changeBackgroundColor.active {
+  background-color: var(--lightener);
+  border-color: white;
+}
+.clr-dark, .clr-dark input.clr-color {
+  background-color: var(--lighten);
+}
+#clr-color-preview {
+  pointer-events: none;
+}
+
+.menuInfoText {
+  color: var(--lightgrey);
+  display: inline-block;
+	padding: 2px 6px 1px;
 }
 
 #profileBio {
@@ -454,13 +478,15 @@ textarea:focus {
   #chat {
     padding: 0;
   }
+  #backToLatest {
+    bottom: calc(var(--entry-height) + var(--small));
+  }
   #petal {
     bottom: var(--entry-height);
     right: 0.75rem;
   }
   #menu {
     bottom: calc(var(--entry-height) + 4.25rem);
-    height: 50vh;
     right: 0;
   }
   #menuPages {

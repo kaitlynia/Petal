@@ -7,6 +7,7 @@ body = document.getElementById('main'),
 messages = document.getElementById('messages'),
 messageContextMenu = document.getElementById('messageContextMenu'),
 entry = document.getElementById('entry'),
+backToLatest = document.getElementById('backToLatest'),
 petal = document.getElementById('petal'),
 menu = document.getElementById('menu'),
 menuTabs = document.querySelectorAll('.menuTab'),
@@ -53,9 +54,11 @@ saveKofi = document.getElementById('saveKofi'),
 showConnectionEvents = document.getElementById('showConnectionEvents'),
 messageScrollThreshold = document.getElementById('messageScrollThreshold'),
 colorisConfig = {
+  theme: 'pill',
   themeMode: 'dark',
-  format: 'hex',
-  alpha: false
+  alpha: false,
+  focusInput: false,
+  margin: 36,
 },
 shortMonthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
 passwordChar = '⬤',
@@ -296,7 +299,9 @@ const handleProfileData = payload => {
 const tryScrollFrom = scrollHeight => {
   if (messages.clientHeight + messages.scrollTop + data.messageScrollThreshold >= scrollHeight) {
     messages.scrollTop = messages.scrollHeight
+    return true
   }
+  return false
 }
 
 const addMessage = (text, modifier, id) => {
@@ -413,7 +418,7 @@ const send = payload => server.send(JSON.stringify(payload))
 
 const payloadHandlers = {
   'auth-exists': payload => {
-    if (data.token !== undefined) {
+    if (data.token !== undefined && data.name === payload.name) {
       systemMessage('name exists, attempting to log in using the stored token...')
       send({
         type: 'auth-token',
@@ -425,7 +430,7 @@ const payloadHandlers = {
         entry.value = ''
         passwordMode = true
         entry.focus()
-        systemMessage('name exists, and you have no stored token. please enter your password (enter nothing to cancel)')
+        systemMessage('name exists, please enter your password (enter nothing to cancel)')
       } else if (payload.view === 'menu') {
         menuDataElements.name.removeEventListener('click', menuNameOnClick)
         menuDataElements.name.classList.add('cursor-inherit')
@@ -1228,6 +1233,11 @@ avatarInput.addEventListener('change', event => {
   avatarImage.src = URL.createObjectURL(avatarInput.files[0])
 })
 
+backToLatest.addEventListener('click', event => {
+  backToLatest.classList.add('hidden')
+  messages.scrollTop = messages.scrollHeight
+})
+
 petal.addEventListener('click', event => {
   toggleMenu()
   event.stopPropagation()
@@ -1266,6 +1276,11 @@ menuDataElements.background.style.fill = _nameColor
 menuDataElements.background.style.stroke = _nameColor
 
 nameColorButton.addEventListener('click', event => {
+  if (nameColorButton.classList.contains('active')) {
+    nameColorButton.classList.remove('active')
+    return
+  }
+  nameColorButton.classList.add('active')
   Coloris({...colorisConfig, onChange: color => {
     menuDataElements.name.style.color = color
     menuDataElements.background.style.fill = color
@@ -1275,6 +1290,12 @@ nameColorButton.addEventListener('click', event => {
   nameColorInput.click()
 })
 messageColorButton.addEventListener('click', event => {
+  if (messageColorButton.classList.contains('active')) {
+    messageColorButton.classList.remove('active')
+    event.preventDefault()
+    return
+  }
+  messageColorButton.classList.add('active')
   Coloris({...colorisConfig, onChange: color => {
     menuDataElements.message.style.color = color
     checkProfile()
@@ -1282,6 +1303,11 @@ messageColorButton.addEventListener('click', event => {
   messageColorInput.click()
 })
 backgroundColorButton.addEventListener('click', event => {
+  if (backgroundColorButton.classList.contains('active')) {
+    backgroundColorButton.classList.remove('active')
+    return
+  }
+  backgroundColorButton.classList.add('active')
   Coloris({...colorisConfig, onChange: color => {
     menuDataElements.background.style.backgroundColor = color
     checkProfile()
@@ -1332,14 +1358,20 @@ resetProfile.addEventListener('click', event => {
   menuDataElements.profileError.classList.add('hidden')
   resetProfile.classList.add('hidden')
   saveProfile.classList.add('hidden')
+  nameColorButton.classList.remove('active')
+  messageColorButton.classList.remove('active')
+  backgroundColorButton.classList.remove('active')
+
   if (!enterPasswordInput.classList.contains('hidden')) {
     menuDataElements.name.classList.remove('cursor-inherit')
     menuDataElements.name.addEventListener('click', menuNameOnClick)
+    editNameIcon.addEventListener('click', menuNameOnClick)
     enterPasswordInput.classList.add('hidden')
     enterPasswordInput.value = ''
     saveProfile.innerText = 'Save'
     resetProfile.innerText = 'Reset'
   }
+
   menuDataElements.name.innerText = data.name || 'anon'
   menuDataElements.name.style.color = data.color
   menuDataElements.message.style.color = data.textColor
@@ -1348,9 +1380,13 @@ resetProfile.addEventListener('click', event => {
   menuDataElements.background.style.stroke = data.color
 })
 
+nameColorInput.addEventListener('close', event => nameColorButton.classList.remove('active'))
+messageColorInput.addEventListener('close', event => messageColorButton.classList.remove('active'))
+backgroundColorInput.addEventListener('close', event => backgroundColorButton.classList.remove('active'))
+
 let passwordCheckTimeout = null
 
-const passwordOnKeyDown = event => {
+const passwordOnInput = event => {
   savePassword.classList.add('hidden')
   clearTimeout(passwordCheckTimeout)
   passwordCheckTimeout = setTimeout(() => {
@@ -1368,8 +1404,8 @@ const passwordOnKeyDown = event => {
   }, 100)
 }
 
-changePasswordInput.addEventListener('keydown', passwordOnKeyDown)
-confirmPasswordInput.addEventListener('keydown', passwordOnKeyDown)
+changePasswordInput.addEventListener('input', passwordOnInput)
+confirmPasswordInput.addEventListener('input', passwordOnInput)
 
 savePassword.addEventListener('click', event => {
   savePassword.classList.add('hidden')
@@ -1390,7 +1426,7 @@ savePassword.addEventListener('click', event => {
 
 let kofiCheckTimeout = null
 
-kofiInput.addEventListener('keydown', event => {
+kofiInput.addEventListener('input', event => {
   saveKofi.classList.add('hidden')
   clearTimeout(kofiCheckTimeout)
   kofiCheckTimeout = setTimeout(() => {
@@ -1437,6 +1473,14 @@ messageScrollThreshold.addEventListener('input', event => {
   menuDataElements.messageScrollThreshold.innerText = `${messageScrollThreshold.value}px`
 })
 
+messages.addEventListener('scroll', event => {
+  if (messages.clientHeight + messages.scrollTop + data.messageScrollThreshold < messages.scrollHeight) {
+    backToLatest.classList.remove('hidden')
+  } else {
+    backToLatest.classList.add('hidden')
+  }
+})
+
 messages.addEventListener('contextmenu', event => {
   if (data.moderator) {
     const message = event.target.closest('.msg-group .msg')
@@ -1469,10 +1513,11 @@ messageContextMenu.addEventListener('click', event => {
 })
 
 body.addEventListener('click', event => {
-  console.log(event.target)
   if (menuOpen && event.target.closest('#menu') === null && document.querySelector('#clr-picker.clr-open') === null) {
     menuOpen = false
+    Coloris.close()
     menu.classList.add('hidden')
+    resetMenu()
   }
   if (messageContextMenuOpen && event.target.closest('#messageContextMenu') === null) {
     clearMessageContextMenu()
@@ -1480,7 +1525,12 @@ body.addEventListener('click', event => {
 })
 
 window.addEventListener('resize', event => {
-  tryScrollFrom(messages.scrollHeight)
+  const scrolled = tryScrollFrom(messages.scrollHeight)
+  if (scrolled) {
+    backToLatest.classList.add('hidden')
+  } else {
+    backToLatest.classList.remove('hidden')
+  }
 })
 
 /* auto-connect */
