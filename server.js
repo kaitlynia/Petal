@@ -104,11 +104,11 @@ const textBackgroundContrast = (text, background) => {
     if (lum1 / 2 < 0.5) {
       return {good: false, ratio: ratio, reason: 'Text color is too dark'}
     } else {
-      return {good: false, ratio: ratio, reason: 'Background color is too light'}
+      return {good: false, ratio: ratio, reason: 'Background color is too dark'}
     }
   } else {
     if (lum2 / 2 < 0.5) {
-      return {good: false, ratio: ratio, reason: 'Background color is too dark'}
+      return {good: false, ratio: ratio, reason: 'Background color is too light'}
     } else {
       return {good: false, ratio: ratio, reason: 'Text color is too light'}
     }
