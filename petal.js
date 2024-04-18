@@ -1473,12 +1473,17 @@ messageScrollThreshold.addEventListener('input', event => {
   menuDataElements.messageScrollThreshold.innerText = `${messageScrollThreshold.value}px`
 })
 
+let updateScrollPositionTimeout = null
+
 messages.addEventListener('scroll', event => {
-  if (messages.clientHeight + messages.scrollTop + data.messageScrollThreshold < messages.scrollHeight) {
-    backToLatest.classList.remove('hidden')
-  } else {
-    backToLatest.classList.add('hidden')
-  }
+  clearTimeout(updateScrollPositionTimeout)
+  updateScrollPositionTimeout = setTimeout(() => {
+    if (messages.clientHeight + messages.scrollTop + data.messageScrollThreshold < messages.scrollHeight) {
+      backToLatest.classList.remove('hidden')
+    } else {
+      backToLatest.classList.add('hidden')
+    }
+  }, 100)
 })
 
 messages.addEventListener('contextmenu', event => {
