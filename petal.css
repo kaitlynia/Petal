@@ -345,7 +345,7 @@ textarea:focus {
   bottom: calc(var(--entry-height) + var(--medium));
   cursor: pointer;
   font-size: 3rem;
-  opacity: 0.5;
+  opacity: calc(2/3);
   position: absolute;
   right: 1.75rem;
   user-select: none;
