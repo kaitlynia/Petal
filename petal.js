@@ -1,6 +1,8 @@
+'use strict';
+
 document.addEventListener('DOMContentLoaded', () => {
 
-const rootURL = window.location.href.split('://', 2)[1].split('/', 2)[0]
+const rootURL = window.location.href.split('://', 2)[1].split('/', 2)[0],
 body = document.getElementById('main'),
 messages = document.getElementById('messages'),
 messageContextMenu = document.getElementById('messageContextMenu'),
@@ -33,6 +35,7 @@ menuDataElements = {
   messageScrollThreshold: document.querySelector('[data-message-scroll-threshold]'),
 },
 changeAvatar = document.getElementById('changeAvatar'),
+editNameIcon = document.getElementById('editNameIcon'),
 nameColorInput = document.getElementById('nameColor'),
 messageColorInput = document.getElementById('messageColor'),
 backgroundColorInput = document.getElementById('backgroundColor'),
@@ -53,7 +56,7 @@ colorisConfig = {
   themeMode: 'dark',
   format: 'hex',
   alpha: false
-}
+},
 shortMonthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
 passwordChar = '⬤',
 currencyEmoji = '&#x1F33A;',
@@ -111,12 +114,10 @@ const setData = (key, val) => {
   localStorage.setItem(key, val)
 }
 
-const luminance = hex => {
-  a = hh => {
-    v = parseInt(hh, 16) / 255
-    return v <= 0.03928
-      ? v / 12.92
-      : Math.pow((v + 0.055) / 1.055, 2.4)
+const luminance = (hex) => {
+  const a = hh => {
+    const v = parseInt(hh, 16) / 255
+    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)
   }
   return a(hex.slice(1,3)) * 0.2126 + a(hex.slice(3,5)) * 0.7152 + a(hex.slice(5,7)) * 0.0722
 }
@@ -170,7 +171,7 @@ const resetMenu = () => {
   saveKofi.classList.add('hidden')
 }
 
-const handleMenuProfileError = (error, noReset) => {
+const handleMenuProfileError = (error, noReset = false) => {
   saveProfile.classList.add('hidden')
   if (!noReset) resetProfile.classList.remove('hidden')
   menuDataElements.profileError.classList.remove('good')
@@ -245,6 +246,8 @@ const handleColorsPayload = payload => {
   entry.style.color = payload.textColor
   setData('bgColor', payload.bgColor)
   menuDataElements.background.style.backgroundColor = payload.bgColor
+  menuDataElements.background.style.fill = payload.nameColor
+  menuDataElements.background.style.stroke = payload.nameColor
   backgroundColorInput.value = payload.bgColor
   entry.style.backgroundColor = payload.bgColor
 }
@@ -299,7 +302,7 @@ const tryScrollFrom = scrollHeight => {
 const addMessage = (text, modifier, id) => {
   const scrollHeight = messages.scrollHeight
   lastMessageGroup = null
-  idText = id !== undefined ? `id="msg-${id}" `: ''
+  const idText = id !== undefined ? `id="msg-${id}" `: ''
 
   messages.innerHTML += `<div ${idText}class="msg${modifier !== undefined ? ' msg--' + modifier : ''}">${text}</div>`
 
@@ -309,7 +312,7 @@ const addMessage = (text, modifier, id) => {
 const addMessageGroup = (message, messageText) => {
   const scrollHeight = messages.scrollHeight
   lastMessageGroup = message.name
-  idText = message.id !== undefined ? `id="msg-${message.id}" `: ''
+  const idText = message.id !== undefined ? `id="msg-${message.id}" `: ''
 
   messages.innerHTML += `<div class="msg-group" style="color: ${message.textColor}; background: ${message.bgColor};"><img class="avatar" src="/avatars/${message.avatar}"><div class="col"><div class="author" style="color: ${message.nameColor};">${message.name}</div><div ${idText}class="msg" style="color: ${message.textColor};">${messageText}</div></div>`
 
@@ -318,7 +321,7 @@ const addMessageGroup = (message, messageText) => {
 
 const addToLastMessageGroup = (message, messageText) => {
   const scrollHeight = messages.scrollHeight
-  idText = message.id !== undefined ? `id="msg-${message.id}" `: ''
+  const idText = message.id !== undefined ? `id="msg-${message.id}" `: ''
 
   messages.querySelector('.msg-group:last-of-type > .col').innerHTML += `<div ${idText}class="msg">${messageText}</div>`
 
@@ -355,6 +358,14 @@ const toggleMenuTab = tab => {
     document.querySelectorAll('.menuPage').forEach(p => p.classList.remove('active'))
     document.getElementById(tab.dataset.page).classList.add('active')
   }
+}
+
+const clearMessageContextMenu = () => {
+  messageContextMenuOpen = false
+  messageContextMenu.classList.add('hidden')
+  messageContextMenu.dataset.id = ''
+  messageContextMenu.style.left = ''
+  messageContextMenu.style.top = ''
 }
 
 const processEntry = content => {
@@ -471,6 +482,7 @@ const payloadHandlers = {
       } else if (payload.view === 'menu') {
         handleMenuProfileOK('Logged in')
         menuDataElements.name.addEventListener('click', menuNameOnClick)
+        editNameIcon.addEventListener('click', menuNameOnClick)
         menuDataElements.name.classList.remove('cursor-inherit')
       }
     } else if (payload.view === 'command') {
@@ -500,6 +512,7 @@ const payloadHandlers = {
       handleMenuProfileError('Incorrect password', true)
       menuDataElements.name.classList.remove('cursor-inherit')
       menuDataElements.name.addEventListener('click', menuNameOnClick)
+      editNameIcon.addEventListener('click', menuNameOnClick)
     }
   },
   'auth-fail-max-names': payload => {
@@ -1175,6 +1188,10 @@ body.addEventListener('keydown', event => {
     if (tabIndex > 0 && tabIndex <= numMenuTabs) {
       toggleMenuTab(menuTabs[tabIndex - 1])
     }
+    event.preventDefault()
+  }
+  if (messageContextMenuOpen) {
+    clearMessageContextMenu()
   }
 })
 
@@ -1214,11 +1231,15 @@ avatarInput.addEventListener('change', event => {
 petal.addEventListener('click', event => {
   toggleMenu()
   event.stopPropagation()
+  if (messageContextMenuOpen) {
+    clearMessageContextMenu()
+  }
 })
 
 menuTabs.forEach(tab => tab.addEventListener('click', event => toggleMenuTab(tab)))
 
 menuDataElements.name.addEventListener('click', menuNameOnClick)
+editNameIcon.addEventListener('click', menuNameOnClick)
 
 menuDataElements.name.addEventListener('focusout', event => {
   menuDataElements.name.contentEditable = 'false'
@@ -1237,13 +1258,18 @@ menuDataElements.name.addEventListener('keydown', event => {
   }
 })
 
-menuDataElements.name.style.color = rgbToHex(window.getComputedStyle(menuDataElements.name).color)
-menuDataElements.message.style.color = rgbToHex(window.getComputedStyle(menuDataElements.message).color)
-menuDataElements.background.style.backgroundColor = rgbToHex(window.getComputedStyle(menuDataElements.background).backgroundColor)
+let _nameColor =  window.getComputedStyle(menuDataElements.name).color
+menuDataElements.name.style.color = _nameColor
+menuDataElements.message.style.color = window.getComputedStyle(menuDataElements.message).color
+menuDataElements.background.style.backgroundColor = window.getComputedStyle(menuDataElements.background).backgroundColor
+menuDataElements.background.style.fill = _nameColor
+menuDataElements.background.style.stroke = _nameColor
 
 nameColorButton.addEventListener('click', event => {
   Coloris({...colorisConfig, onChange: color => {
     menuDataElements.name.style.color = color
+    menuDataElements.background.style.fill = color
+    menuDataElements.background.style.stroke = color
     checkProfile()
   }})
   nameColorInput.click()
@@ -1318,11 +1344,13 @@ resetProfile.addEventListener('click', event => {
   menuDataElements.name.style.color = data.color
   menuDataElements.message.style.color = data.textColor
   menuDataElements.background.style.backgroundColor = data.bgColor
+  menuDataElements.background.style.fill = data.color
+  menuDataElements.background.style.stroke = data.color
 })
 
 let passwordCheckTimeout = null
 
-passwordOnKeyDown = event => {
+const passwordOnKeyDown = event => {
   savePassword.classList.add('hidden')
   clearTimeout(passwordCheckTimeout)
   passwordCheckTimeout = setTimeout(() => {
@@ -1441,16 +1469,13 @@ messageContextMenu.addEventListener('click', event => {
 })
 
 body.addEventListener('click', event => {
-  if (menuOpen && event.target.closest('#menu, #clr-picker') === null) {
+  console.log(event.target)
+  if (menuOpen && event.target.closest('#menu') === null && document.querySelector('#clr-picker.clr-open') === null) {
     menuOpen = false
     menu.classList.add('hidden')
   }
   if (messageContextMenuOpen && event.target.closest('#messageContextMenu') === null) {
-    messageContextMenuOpen = false
-    messageContextMenu.classList.add('hidden')
-    messageContextMenu.dataset.id = ''
-    messageContextMenu.style.left = ''
-    messageContextMenu.style.top = ''
+    clearMessageContextMenu()
   }
 })
 

@@ -401,7 +401,6 @@ textarea:focus {
 
 #userProfileNameRow {
   display: flex;
-  gap: 0.5rem;
 }
 #userProfileName {
   cursor: pointer;
@@ -413,14 +412,12 @@ textarea:focus {
 #userProfileName:hover {
   text-decoration: none;
 }
-#userProfileName::after {
-	content: url(edit.svg);
-	font-size: 1rem;
-	position: absolute;
-	right: -1.75rem;
-	top: -0.25rem;
-	padding: 0.25rem;
-  stroke: inherit;
+#editNameIcon {
+  cursor: pointer;
+  height: 1.5rem;
+  opacity: 0.5;
+  padding: 0.1rem 0.25rem;
+  width: 1.5rem;
 }
 #changeAvatar.cursor-inherit, #userProfileName.cursor-inherit {
   cursor: inherit;
