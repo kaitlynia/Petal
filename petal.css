@@ -5,6 +5,7 @@
   --lightener: rgba(255, 255, 255, 0.3);
   --lightenest: rgba(255, 255, 255, 0.6);
   --priv-message: #e8f1b1;
+  --darkgrey: #393939;
   --grey: #aaaaaa;
   --lightgrey: #dddddd;
   --good: #9eff9e;
@@ -444,7 +445,10 @@ textarea:focus {
   background-color: var(--lightener);
   border-color: white;
 }
-.clr-dark, .clr-dark input.clr-color {
+.clr-dark {
+  background-color: var(--darkgrey);
+}
+.clr-dark input.clr-color {
   background-color: var(--lighten);
 }
 .clr-picker.clr-polaroid::before {
