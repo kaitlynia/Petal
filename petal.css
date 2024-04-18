@@ -396,7 +396,7 @@ textarea:focus {
 }
 
 #menuPages {
-  height: calc(40vh - 4rem);
+  height: calc(50vh - 4rem);
   overflow-y: auto;
   max-width: 100%;
   padding: 1rem;
@@ -495,9 +495,6 @@ textarea:focus {
   #menu {
     bottom: calc(var(--entry-height) + 4.25rem);
     right: 0;
-  }
-  #menuPages {
-    height: calc(50vh - 4rem);
   }
   #menu {
     width: 480px;
