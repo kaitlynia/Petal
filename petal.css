@@ -447,6 +447,9 @@ textarea:focus {
 .clr-dark, .clr-dark input.clr-color {
   background-color: var(--lighten);
 }
+.clr-picker.clr-polaroid::before {
+  display: none;
+}
 #clr-color-preview {
   pointer-events: none;
 }
@@ -472,7 +475,7 @@ textarea:focus {
   }
   #stream-wrapper + #chat {
     height: 100%;
-    min-width: 322px;
+    min-width: 360px;
     width: 25%;
   }
   #chat {
@@ -500,6 +503,9 @@ textarea:focus {
     min-width: 306px;
     right: 5%;
     width: 90%;
+  }
+  .clr-picker.clr-pill {
+    width: 340px;
   }
   #messages > .msg {
     padding: var(--small) 0.5rem;

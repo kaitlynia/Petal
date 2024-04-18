@@ -53,13 +53,6 @@ kofiInput = document.getElementById('kofi'),
 saveKofi = document.getElementById('saveKofi'),
 showConnectionEvents = document.getElementById('showConnectionEvents'),
 messageScrollThreshold = document.getElementById('messageScrollThreshold'),
-colorisConfig = {
-  theme: 'pill',
-  themeMode: 'dark',
-  alpha: false,
-  focusInput: false,
-  margin: 36,
-},
 shortMonthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
 passwordChar = '⬤',
 currencyEmoji = '&#x1F33A;',
@@ -89,6 +82,13 @@ menuOpen = false,
 sanitizeConfig = {
   ALLOWED_TAGS: ['a', 'b', 'i', 's', 'u', 'br'],
   ALLOWED_ATTR: ['href', 'target', 'rel']
+},
+colorisConfig = {
+  theme: 'pill',
+  themeMode: 'dark',
+  alpha: false,
+  focusInput: false,
+  margin: 36,
 },
 data = {
   server: localStorage.getItem('server') || 'chat.lynnya.live',
@@ -1281,6 +1281,8 @@ nameColorButton.addEventListener('click', event => {
     return
   }
   nameColorButton.classList.add('active')
+  colorisConfig.theme = body.clientWidth >= 1200 ? 'pill' : 'polaroid'
+
   Coloris({...colorisConfig, onChange: color => {
     menuDataElements.name.style.color = color
     menuDataElements.background.style.fill = color
@@ -1296,6 +1298,8 @@ messageColorButton.addEventListener('click', event => {
     return
   }
   messageColorButton.classList.add('active')
+  colorisConfig.theme = body.clientWidth >= 1200 ? 'pill' : 'polaroid'
+
   Coloris({...colorisConfig, onChange: color => {
     menuDataElements.message.style.color = color
     checkProfile()
@@ -1308,6 +1312,8 @@ backgroundColorButton.addEventListener('click', event => {
     return
   }
   backgroundColorButton.classList.add('active')
+  colorisConfig.theme = body.clientWidth >= 1200 ? 'pill' : 'polaroid'
+
   Coloris({...colorisConfig, onChange: color => {
     menuDataElements.background.style.backgroundColor = color
     checkProfile()
