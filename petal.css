@@ -424,7 +424,7 @@ textarea:focus {
 #editNameIcon {
   cursor: pointer;
   height: 1.5rem;
-  opacity: 0.5;
+  opacity: calc(2/3);
   padding: 0.1rem 0.25rem;
   width: 1.75rem;
 }
