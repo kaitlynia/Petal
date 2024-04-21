@@ -1,10 +1,10 @@
 const crypto = require('crypto'),
 querystring = require('querystring'),
 fs = require('fs'),
-https = require('https'),
-WSServer = require('ws').Server,
-createDOMPurify = require('dompurify'),
 JSDOM = require('jsdom').JSDOM,
+window = new JSDOM('').window,
+createDOMPurify = require('dompurify'),
+DOMPurify = createDOMPurify(window),
 
 dataPath = './data.json',
 UTCDay = 86400000,
@@ -24,6 +24,7 @@ defaultBgColor = '#202020',
 maxMessageLength = 500,
 maxMessageHistory = 50,
 maxMessageLookup = 1000,
+messageLookup = new Map(),
 socks = new Set(),
 
 dailyCurrencyMin = 50,
@@ -34,8 +35,6 @@ dailyCurrencySubRatio = (dailyCurrencySubMin + dailyCurrencySubMax) / (dailyCurr
 dailyPremiumChance = 0.1,
 dailyPremiumSubChance = 0.2,
 dollarPerPremiumCurrency = 1
-
-let messageLookup = new Map()
 
 let data = {
   broadcaster: '',
@@ -242,29 +241,6 @@ const kofiHandler = payload => {
   }
 }
 
-const window = new JSDOM('').window
-const DOMPurify = createDOMPurify(window)
-const https_server = https.createServer({
-  cert: fs.readFileSync(data.cert),
-  key: fs.readFileSync(data.key),
-}, (req, res) => {
-  if (req.method === 'POST') {
-    req.on('data', data => {
-      const payloadStr = querystring.parse(data.toString()).data
-      if (payloadStr !== undefined) {
-        kofiHandler(JSON.parse(payloadStr))
-      }
-      res.writeHead(200)
-      res.end()
-    })
-  }
-})
-https_server.listen(data.port)
-
-const wss = new WSServer({
-  server: https_server
-})
-
 const updateParticipants = (sock, action) => {
   const participantsStr = JSON.stringify({
     type: 'participants-update',
@@ -299,9 +275,7 @@ const authToken = (sock, token, name, newName=false) => {
       avatar: data.nameAvatar[sock.name] || 'anon.png',
       stats: data.tokenStats[sock.token] || {},
       kofi: aggregateKofiData(sock.token),
-      moderator: isModerator(sock.token),
-      history: getHistory(),
-      participants: getParticipants()
+      moderator: isModerator(sock.token)
     })
     updateParticipants(sock, action)
   } else {
@@ -377,6 +351,53 @@ const getHistory = () => {
   })
 }
 
+const server = Bun.serve({
+  port: data.port,
+  tls: {
+    key: Bun.file(data.key),
+    cert: Bun.file(data.cert),
+  },
+  fetch(req, server) {
+    if (req.method === 'POST') {
+      req.on('data', data => {
+        const payloadStr = querystring.parse(data.toString()).data
+        if (payloadStr !== undefined) {
+          kofiHandler(JSON.parse(payloadStr))
+        }
+        return new Response(null, {status: 200})
+      })
+    } else {
+      server.upgrade(req)
+    }
+  },
+  websocket: {
+    open(sock) {
+      sock.subscribe('message')
+      socks.add(sock)
+      sock.name = 'anon'
+      sock.nameColor = defaultNameColor
+      sock.textColor = defaultTextColor
+      sock.bgColor = defaultBgColor
+      sockSend(sock, {
+        type: 'hello',
+        history: getHistory(),
+        participants: getParticipants()
+      })
+    },
+    close(sock, code, message) {
+      socks.delete(sock)
+      if (sock.token !== undefined) {
+        updateParticipants(sock, 'left')
+      }
+    },
+    drain(sock) {},
+    message(sock, message) {
+      const payload = JSON.parse(message)
+      payloadHandlers[payload.type](sock, payload)
+    },
+  }
+})
+
 const payloadHandlers = {
   'auth-name': (sock, payload) => {
     if (payload.name === 'anon' || data.nameToken[payload.name] !== undefined) {
@@ -412,7 +433,7 @@ const payloadHandlers = {
     authToken(sock, payload.token, payload.name)
   },
   'auth-password': (sock, payload) => {
-    if (payload.hasOwnProperty('name') && payload.hasOwnProperty('password')) {
+    if (payload.name !== undefined && payload.password !== undefined) {
       hashPassword(payload.password, hash => {
         const token = data.nameToken[payload.name]
         if (data.tokenHash[token] === hash) {
@@ -430,8 +451,6 @@ const payloadHandlers = {
             stats: data.tokenStats[sock.token] || {},
             kofi: aggregateKofiData(sock.token),
             moderator: isModerator(sock.token),
-            history: getHistory(),
-            participants: getParticipants(),
             view: payload.view,
           })
           updateParticipants(sock, 'joined')
@@ -456,8 +475,6 @@ const payloadHandlers = {
       sockSend(sock, {
         type: 'auth-new-ok',
         name: sock.name,
-        history: getHistory(),
-        participants: getParticipants()
       })
       updateParticipants(sock, 'joined as a new user (say hi!)')
     } else {
@@ -506,7 +523,7 @@ const payloadHandlers = {
     })
   },
   'priv-message': (sock, payload) => {
-    if (payload.hasOwnProperty('body') && payload.hasOwnProperty('name')) {
+    if (payload.body !== undefined && payload.name !== undefined) {
       const user = [...socks].find(s => s.name === payload.name)
       if (user !== undefined) {
         const body = sanitize(payload.body)
@@ -536,7 +553,7 @@ const payloadHandlers = {
     }
   },
   'message': (sock, payload) => {
-    if (payload.hasOwnProperty('body')) {
+    if (payload.body !== undefined) {
       const cleanBody = sanitize(payload.body)
 
       if (cleanBody.length > maxMessageLength) return
@@ -568,11 +585,11 @@ const payloadHandlers = {
 
       const messageStr = JSON.stringify(message)
 
-      socks.forEach(s => s.send(messageStr))
+      server.publish('message', messageStr)
     }
   },
   'command-password': (sock, payload) => {
-    if (sock.token !== undefined && payload.hasOwnProperty('password')) {
+    if (sock.token !== undefined && payload.password !== undefined) {
       hashPassword(payload.password, hash => {
         data.tokenHash[sock.token] = hash
         saveData()
@@ -589,7 +606,7 @@ const payloadHandlers = {
     }
   },
   'command-kofi': (sock, payload) => {
-    if (sock.token !== undefined && payload.hasOwnProperty('kofi')) {
+    if (sock.token !== undefined && payload.kofi !== undefined) {
       const newKofi = payload.kofi
       const existingToken = data.kofiToken[newKofi]
       if (existingToken !== undefined && sock.token !== existingToken) {
@@ -673,7 +690,7 @@ const payloadHandlers = {
     }
   },
   'command-color': (sock, payload) => {
-    if (payload.hasOwnProperty('color')) {
+    if (payload.color !== undefined) {
       if (sock.token !== undefined) {
         if (validHexColor(payload.color)) {
           sock.nameColor = payload.color
@@ -699,7 +716,7 @@ const payloadHandlers = {
     }
   },
   'command-textcolor': (sock, payload) => {
-    if (payload.hasOwnProperty('color')) {
+    if (payload.color !== undefined) {
       if (sock.token !== undefined) {
         if (hasPetalPlus(sock.token)) {
           if (validHexColor(payload.color)) {
@@ -732,7 +749,7 @@ const payloadHandlers = {
     }
   },
   'command-bgcolor': (sock, payload) => {
-    if (payload.hasOwnProperty('color')) {
+    if (payload.color !== undefined) {
       if (sock.token !== undefined) {
         if (hasPetalPlus(sock.token)) {
           if (validHexColor(payload.color)) {
@@ -947,23 +964,3 @@ const payloadHandlers = {
     }
   }
 }
-
-wss.on('connection', sock => {
-  socks.add(sock)
-  sock.name = 'anon'
-  sock.nameColor = defaultNameColor
-  sock.textColor = defaultTextColor
-  sock.bgColor = defaultBgColor
-
-  sock.on('message', msg => {
-    const payload = JSON.parse(msg)
-    payloadHandlers[payload.type](sock, payload)
-  })
-
-  sock.on('close', () => {
-    socks.delete(sock)
-    if (sock.token !== undefined) {
-      updateParticipants(sock, 'left')
-    }
-  })
-})

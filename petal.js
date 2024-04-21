@@ -417,6 +417,10 @@ const formatTimeDelta = delta => {
 const send = payload => server.send(JSON.stringify(payload))
 
 const payloadHandlers = {
+  'hello': payload => {
+    addHistory(payload.history)
+    payloadHandlers['participants-ok'](payload)
+  },
   'auth-exists': payload => {
     if (data.token !== undefined && data.name === payload.name) {
       systemMessage('name exists, attempting to log in using the stored token...')
@@ -463,8 +467,6 @@ const payloadHandlers = {
     menuDataElements.name.innerText = payload.name
     nameColorButton.classList.remove('hidden')
     loggedIn = true
-    addHistory(payload.history)
-    payloadHandlers['participants-ok'](payload)
     if (payload.view === 'command') {
       systemMessage(`logged in. please set a password by accessing the Petal menu, then Settings`)
     } else if (payload.view === 'menu') {
@@ -480,8 +482,6 @@ const payloadHandlers = {
     setData('moderator', payload.moderator)
     if (!loggedIn) {
       loggedIn = true
-      addHistory(payload.history)
-      payloadHandlers['participants-ok'](payload)
       if (payload.view === 'command') {
         systemMessage(`logged in as <b style="color: ${payload.nameColor};">${payload.name}</b>`)
       } else if (payload.view === 'menu') {
@@ -491,7 +491,7 @@ const payloadHandlers = {
         menuDataElements.name.classList.remove('cursor-inherit')
       }
     } else if (payload.view === 'command') {
-      systemMessage(`changed name to <b style="color: ${payload.nameColor};">${payload.name}</b>`)
+      systemMessage(`logged in as <b style="color: ${payload.nameColor};">${payload.name}</b>`)
     }
   },
   'auth-ok': payload => {
@@ -503,9 +503,7 @@ const payloadHandlers = {
     setData('moderator', payload.moderator)
     if (!loggedIn) {
       loggedIn = true
-      addHistory(payload.history)
       systemMessage(`logged in as <b style="color: ${payload.nameColor};">${payload.name}</b>`)
-      payloadHandlers['participants-ok'](payload)
     } else {
       systemMessage(`changed name to <b style="color: ${payload.nameColor};">${payload.name}</b>`)
     }
