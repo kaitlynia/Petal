@@ -419,7 +419,7 @@ const send = payload => server.send(JSON.stringify(payload))
 const payloadHandlers = {
   'hello': payload => {
     addHistory(payload.history)
-    payloadHandlers['participants-ok'](payload)
+    // payloadHandlers['participants-ok'](payload)
   },
   'auth-exists': payload => {
     if (data.token !== undefined && data.name === payload.name) {
