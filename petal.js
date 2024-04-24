@@ -581,7 +581,7 @@ const payloadHandlers = {
       message.innerText = '[message deleted]'
     }
   },
-  'profile': payload => {
+  'user-profile': payload => {
     profilePopoverAvatar.src = `/avatars/${payload.avatar}`
     profilePopoverName.innerText = payload.name
     profilePopoverName.style.color = payload.nameColor
@@ -1533,7 +1533,8 @@ messages.addEventListener('scroll', event => {
 messages.addEventListener('click', event => {
   const profileTrigger = event.target.closest('.msg-group .avatar, .msg-group .author')
   if (profileTrigger !== null) {
-    const profileMessage = profileTrigger.closest('.msg-group').querySelector('.msg:first-of-type')
+    const profileMessage = profileTrigger.closest('.msg-group').querySelector('.msg')
+    console.log(profileMessage.id)
     if (profileMessage !== null && profileMessage.id) {
       send({
         type: 'profile-from-message',

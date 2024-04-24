@@ -611,12 +611,12 @@ const payloadHandlers = {
     if (payload.id !== undefined && messageLookup.has(payload.id)) {
       const message = messageLookup.get(payload.id)
       sockSend(sock, {
-        type: 'profile',
+        type: 'user-profile',
         avatar: data.nameAvatar[message.name] || 'anon.png',
         name: message.name,
         nameColor: data.nameColor[message.name],
-        textColor: data.textColor[message.name],
-        bgColor: data.bgColor[message.name],
+        textColor: data.nameTextColor[message.name],
+        bgColor: data.nameBgColor[message.name],
         bio: data.nameBio[message.name] || ''
       })
     }
