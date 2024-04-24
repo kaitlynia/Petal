@@ -24,7 +24,6 @@ defaultBgColor = '#202020',
 maxMessageLength = 500,
 maxMessageHistory = 50,
 maxMessageLookup = 1000,
-messageLookup = new Map(),
 socks = new Set(),
 
 dailyCurrencyMin = 50,
@@ -79,6 +78,13 @@ const saveData = () => {
 if (fs.existsSync(dataPath)) {
   data = JSON.parse(fs.readFileSync(dataPath, 'utf8'))
 }
+
+const messageLookup = new Set([...data.messageHistory.map(message => {
+  [message.id, {
+    token: message.token,
+    name: message.name
+  }]
+})])
 
 const luminance = hex => {
   a = hh => {
@@ -595,11 +601,12 @@ const payloadHandlers = {
   },
   'bio': (sock, payload) => {
     if (sock.token !== undefined && payload.bio !== undefined) {
-      data.nameBio[sock.name] = sanitize(payload.bio)
+      const bio = data.nameBio[sock.name] = sanitize(payload.bio)
       saveData()
 
       sockSend(sock, {
-        type: 'bio-ok'
+        type: 'bio-ok',
+        bio: bio
       })
     } else {
       sockSend(sock, {

@@ -596,6 +596,7 @@ const payloadHandlers = {
     menuDataElements.bioInfo.classList.remove('hidden')
   },
   'bio-ok': payload => {
+    setData('bio', payload.bio)
     menuDataElements.bioInfo.innerText = 'Saved'
     menuDataElements.bioInfo.classList.remove('bad')
     menuDataElements.bioInfo.classList.remove('hidden')
