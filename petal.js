@@ -86,6 +86,7 @@ historyAdded = false,
 loggedIn = false,
 lastMessageGroup = null,
 messageContextMenuOpen = false,
+profilePopoverOpen = false,
 menuOpen = false,
 sanitizeConfig = {
   ALLOWED_TAGS: ['a', 'b', 'i', 's', 'u', 'br'],
@@ -587,8 +588,9 @@ const payloadHandlers = {
     profilePopoverName.style.color = payload.nameColor
     profilePopoverBio.style.color = payload.textColor
     profilePopover.style.backgroundColor = payload.bgColor
-    profilePopoverBio.innerText = payload.bio
+    profilePopoverBio.innerText = payload.bio || 'user has no bio'
     profilePopover.classList.remove('hidden')
+    profilePopoverOpen = true
   },
   'bio-auth-required': payload => {
     menuDataElements.bioInfo.innerText = 'Change name before writing bio'
@@ -1272,6 +1274,10 @@ petal.addEventListener('click', event => {
   if (messageContextMenuOpen) {
     clearMessageContextMenu()
   }
+  if (profilePopoverOpen) {
+    profilePopoverOpen = false
+    profilePopover.classList.add('hidden')
+  }
 })
 
 menuTabs.forEach(tab => tab.addEventListener('click', event => toggleMenuTab(tab)))
@@ -1535,7 +1541,6 @@ messages.addEventListener('click', event => {
   const profileTrigger = event.target.closest('.msg-group .avatar, .msg-group .author')
   if (profileTrigger !== null) {
     const profileMessage = profileTrigger.closest('.msg-group').querySelector('.msg')
-    console.log(profileMessage.id)
     if (profileMessage !== null && profileMessage.id) {
       send({
         type: 'profile-from-message',
@@ -1546,6 +1551,7 @@ messages.addEventListener('click', event => {
       profilePopover.style.top = event.clientY + 10 + 'px'
     }
   } else {
+    profilePopoverOpen = false
     profilePopover.classList.add('hidden')
   }
 })
@@ -1590,6 +1596,10 @@ body.addEventListener('click', event => {
   }
   if (messageContextMenuOpen && event.target.closest('#messageContextMenu') === null) {
     clearMessageContextMenu()
+  }
+  if (profilePopoverOpen && event.target.closest('#profilePopover') === null) {
+    profilePopoverOpen = false
+    profilePopover.classList.add('hidden')
   }
 })
 

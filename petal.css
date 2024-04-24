@@ -469,10 +469,12 @@ textarea:focus {
   max-width: 320px;
 }
 
-div#profilePopover {
+#profilePopover {
   background-color: var(--darkgrey);
+  border: 0.25rem solid var(--lighten);
   border-radius: 0.5rem;
   bottom: 190px;
+  height: max-content;
   left: 100px;
   max-width: 260px;
   position: absolute;
@@ -491,6 +493,7 @@ div#profilePopover {
 #profilePopoverName {
   color: var(--grey);
   font-size: 1.5rem;
+  font-weight: bold;
 }
 #profilePopoverBio {
   color: #ffffff;

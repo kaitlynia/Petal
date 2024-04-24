@@ -621,9 +621,9 @@ const payloadHandlers = {
         type: 'user-profile',
         avatar: data.nameAvatar[message.name] || 'anon.png',
         name: message.name,
-        nameColor: data.nameColor[message.name],
-        textColor: data.nameTextColor[message.name],
-        bgColor: data.nameBgColor[message.name],
+        nameColor: data.nameColor[message.name] || defaultNameColor,
+        textColor: data.nameTextColor[message.name] || defaultTextColor,
+        bgColor: data.nameBgColor[message.name] || defaultBgColor,
         bio: data.nameBio[message.name] || ''
       })
     }
