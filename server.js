@@ -67,6 +67,7 @@ let data = {
   nameTextColor: {},
   nameBgColor: {},
   nameAvatar: {},
+  nameBio: {},
   messageHistory: [],
   messageHistoryIndex: 0
 }
@@ -273,6 +274,7 @@ const authToken = (sock, token, name, newName=false) => {
       textColor: sock.textColor,
       bgColor: sock.bgColor,
       avatar: data.nameAvatar[sock.name] || 'anon.png',
+      bio: data.nameBio[sock.name] || '',
       stats: data.tokenStats[sock.token] || {},
       kofi: aggregateKofiData(sock.token),
       moderator: isModerator(sock.token)
@@ -338,14 +340,13 @@ const getParticipants = () => [...socks].map(s => s.name)
 const getHistory = () => {
   const rawHistory = data.messageHistory.slice(data.messageHistoryIndex).concat(...data.messageHistory.slice(0, data.messageHistoryIndex))
   return rawHistory.map(message => {
-    const token = data.nameToken[message.name]
     return {
       id: message.id,
       avatar: data.nameAvatar[message.name] || 'anon.png',
       name: message.name,
       nameColor: data.nameColor[message.name] || defaultNameColor,
-      textColor: hasPetalPlus(token) ? data.nameTextColor[message.name] || defaultTextColor : defaultTextColor,
-      bgColor: hasPetalPlus(token) ? data.nameBgColor[message.name] || defaultBgColor : defaultBgColor,
+      textColor: hasPetalPlus(message.token) ? data.nameTextColor[message.name] || defaultTextColor : defaultTextColor,
+      bgColor: hasPetalPlus(message.token) ? data.nameBgColor[message.name] || defaultBgColor : defaultBgColor,
       body: message.body,
     }
   })
@@ -448,6 +449,7 @@ const payloadHandlers = {
             textColor: sock.textColor,
             bgColor: sock.bgColor,
             avatar: data.nameAvatar[sock.name] || 'anon.png',
+            bio: data.nameBio[sock.name] || '',
             stats: data.tokenStats[sock.token] || {},
             kofi: aggregateKofiData(sock.token),
             moderator: isModerator(sock.token),
@@ -570,11 +572,14 @@ const payloadHandlers = {
         body: cleanBody
       }
 
-      messageLookup.set(message.id, sock.token)
+      messageLookup.set(message.id, {
+        token: sock.token || null,
+        name: sock.name
+      })
       if (messageLookup.size > maxMessageLookup) {
         messageLookup.delete(messageLookup.keys().next().value)
       }
-      data.messageHistory[data.messageHistoryIndex] = {id: message.id, name: sock.name, body: cleanBody}
+      data.messageHistory[data.messageHistoryIndex] = {id: message.id, token: sock.token, name: sock.name, body: cleanBody}
 
       if (data.messageHistoryIndex + 1 >= maxMessageHistory) {
         data.messageHistoryIndex = 0
@@ -586,6 +591,34 @@ const payloadHandlers = {
       const messageStr = JSON.stringify(message)
 
       server.publish('message', messageStr)
+    }
+  },
+  'bio': (sock, payload) => {
+    if (sock.token !== undefined && payload.bio !== undefined) {
+      data.nameBio[sock.name] = sanitize(payload.bio)
+      saveData()
+
+      sockSend(sock, {
+        type: 'bio-ok'
+      })
+    } else {
+      sockSend(sock, {
+        type: 'bio-auth-required'
+      })
+    }
+  },
+  'profile-from-message': (sock, payload) => {
+    if (payload.id !== undefined && messageLookup.has(payload.id)) {
+      const message = messageLookup.get(payload.id)
+      sockSend(sock, {
+        type: 'profile',
+        avatar: data.nameAvatar[message.name] || 'anon.png',
+        name: message.name,
+        nameColor: data.nameColor[message.name],
+        textColor: data.textColor[message.name],
+        bgColor: data.bgColor[message.name],
+        bio: data.nameBio[message.name] || ''
+      })
     }
   },
   'command-password': (sock, payload) => {
@@ -815,6 +848,8 @@ const payloadHandlers = {
             sock.textColor = data.nameTextColor[payload.name] = payload.textColor
             delete data.nameBgColor[sock.name]
             sock.bgColor = data.nameBgColor[payload.name] = payload.bgColor
+            data.nameBio[payload.name] = data.nameBio[sock.name]
+            delete data.nameBio[sock.name]
             sock.name = payload.name
 
             if (sock.name !== payload.name) {

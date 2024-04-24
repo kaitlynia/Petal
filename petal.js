@@ -6,6 +6,10 @@ const rootURL = window.location.href.split('://', 2)[1].split('/', 2)[0],
 body = document.getElementById('main'),
 messages = document.getElementById('messages'),
 messageContextMenu = document.getElementById('messageContextMenu'),
+profilePopover = document.getElementById('profilePopover'),
+profilePopoverAvatar = document.getElementById('profilePopoverAvatar'),
+profilePopoverName = document.getElementById('profilePopoverName'),
+profilePopoverBio = document.getElementById('profilePopoverBio'),
 entry = document.getElementById('entry'),
 backToLatest = document.getElementById('backToLatest'),
 petal = document.getElementById('petal'),
@@ -16,7 +20,9 @@ menuDataElements = {
   avatar: document.querySelector('[data-profile-avatar]'),
   message: document.querySelector('[data-profile-message]'),
   background: document.querySelector('[data-profile-background]'),
-  profileError: document.querySelector('[data-profile-error]'),
+  profileInfo: document.querySelector('[data-profile-info]'),
+  bio: document.querySelector('[data-profile-bio]'),
+  bioInfo: document.querySelector('[data-bio-info]'),
   currency: document.querySelector('[data-stats-currency]'),
   premiumCurrency: document.querySelector('[data-stats-premium-currency]'),
   currencyEarned: document.querySelector('[data-stats-currency-earned]'),
@@ -31,8 +37,8 @@ menuDataElements = {
   subsTotal: document.querySelector('[data-stats-subs-total]'),
   donations: document.querySelector('[data-stats-donations]'),
   kofiTotal: document.querySelector('[data-stats-kofi-total]'),
-  passwordError: document.querySelector('[data-password-error]'),
-  kofiError: document.querySelector('[data-kofi-error]'),
+  passwordInfo: document.querySelector('[data-password-info]'),
+  kofiInfo: document.querySelector('[data-kofi-info]'),
   messageScrollThreshold: document.querySelector('[data-message-scroll-threshold]'),
 },
 changeAvatar = document.getElementById('changeAvatar'),
@@ -46,6 +52,7 @@ backgroundColorButton = document.getElementById('changeBackgroundColor'),
 saveProfile = document.getElementById('saveProfile'),
 resetProfile = document.getElementById('resetProfile'),
 enterPasswordInput = document.getElementById('enterPassword'),
+saveBio = document.getElementById('saveBio'),
 changePasswordInput = document.getElementById('changePassword'),
 confirmPasswordInput = document.getElementById('confirmPassword'),
 savePassword = document.getElementById('savePassword'),
@@ -75,6 +82,7 @@ passwordMode = false,
 entryPassword = '',
 menuPassword = '',
 menuKofi = '',
+historyAdded = false,
 loggedIn = false,
 lastMessageGroup = null,
 messageContextMenuOpen = false,
@@ -168,26 +176,27 @@ const resetMenu = () => {
   confirmPasswordInput.value = ''
   // end security lines
   resetProfile.click()
-  menuDataElements.passwordError.classList.add('hidden')
+  menuDataElements.bioInfo.classList.add('hidden')
+  menuDataElements.passwordInfo.classList.add('hidden')
   kofiInput.value = ''
-  menuDataElements.kofiError.classList.add('hidden')
+  menuDataElements.kofiInfo.classList.add('hidden')
   saveKofi.classList.add('hidden')
 }
 
-const handleMenuProfileError = (error, noReset = false) => {
+const handleMenuProfileInfo = (error, noReset = false) => {
   saveProfile.classList.add('hidden')
   if (!noReset) resetProfile.classList.remove('hidden')
-  menuDataElements.profileError.classList.remove('good')
-  menuDataElements.profileError.innerText = error
-  menuDataElements.profileError.classList.remove('hidden')
+  menuDataElements.profileInfo.classList.remove('good')
+  menuDataElements.profileInfo.innerText = error
+  menuDataElements.profileInfo.classList.remove('hidden')
 }
 
 const handleMenuProfileOK = message => {
   resetProfile.classList.add('hidden')
   saveProfile.classList.add('hidden')
-  menuDataElements.profileError.classList.add('good')
-  menuDataElements.profileError.innerText = message
-  menuDataElements.profileError.classList.remove('hidden')
+  menuDataElements.profileInfo.classList.add('good')
+  menuDataElements.profileInfo.innerText = message
+  menuDataElements.profileInfo.classList.remove('hidden')
 }
 
 const checkColors = (nameColor, textColor, bgColor) => {
@@ -220,22 +229,22 @@ const checkProfile = () => {
   const bgColor = rgbToHex(menuDataElements.background.style.backgroundColor)
 
   if (name === data.name && color === data.color && textColor === data.textColor && bgColor === data.bgColor) {
-    menuDataElements.profileError.classList.add('hidden')
-    menuDataElements.profileError.innerText = ''
+    menuDataElements.profileInfo.classList.add('hidden')
+    menuDataElements.profileInfo.innerText = ''
     saveProfile.classList.add('hidden')
     resetProfile.classList.add('hidden')
   } else if (validName(name)) {
     const colorResult = checkColors(color, textColor, bgColor)
     if (colorResult.good) {
-      menuDataElements.profileError.classList.add('hidden')
-      menuDataElements.profileError.innerText = ''
+      menuDataElements.profileInfo.classList.add('hidden')
+      menuDataElements.profileInfo.innerText = ''
       saveProfile.classList.remove('hidden')
       resetProfile.classList.remove('hidden')
     } else {
-      handleMenuProfileError(colorResult.reason)
+      handleMenuProfileInfo(colorResult.reason)
     }
   } else {
-    handleMenuProfileError('Invalid name, letters/numbers only')
+    handleMenuProfileInfo('Invalid name, letters/numbers only')
   }
 }
 
@@ -292,6 +301,7 @@ const handleProfileData = payload => {
   menuDataElements.avatar.src = `/avatars/${payload.avatar}`
   nameColorButton.classList.remove('hidden')
   handleColorsPayload(payload)
+  setData('bio', payload.bio)
   handleStatsData(payload.stats)
   handleKofiData(payload.kofi)
 }
@@ -369,11 +379,9 @@ const clearMessageContextMenu = () => {
   messageContextMenuOpen = false
   messageContextMenu.classList.add('hidden')
   messageContextMenu.dataset.id = ''
-  messageContextMenu.style.left = ''
-  messageContextMenu.style.top = ''
 }
 
-const processEntry = content => {
+const processText = content => {
   return sanitize(content)
     .trim()
     .replaceAll(/\*\*([^]+)\*\*/gm, '<b>$1</b>')
@@ -418,8 +426,10 @@ const send = payload => server.send(JSON.stringify(payload))
 
 const payloadHandlers = {
   'hello': payload => {
-    addHistory(payload.history)
     // payloadHandlers['participants-ok'](payload)
+    if (historyAdded) return
+    historyAdded = true
+    addHistory(payload.history)
   },
   'auth-exists': payload => {
     if (data.token !== undefined && data.name === payload.name) {
@@ -512,7 +522,7 @@ const payloadHandlers = {
     if (payload.view === 'command') {
       systemMessage('incorrect password')
     } else if (payload.view === 'menu') {
-      handleMenuProfileError('Incorrect password', true)
+      handleMenuProfileInfo('Incorrect password', true)
       menuDataElements.name.classList.remove('cursor-inherit')
       menuDataElements.name.addEventListener('click', menuNameOnClick)
       editNameIcon.addEventListener('click', menuNameOnClick)
@@ -571,6 +581,25 @@ const payloadHandlers = {
       message.innerText = '[message deleted]'
     }
   },
+  'profile': payload => {
+    profilePopoverAvatar.src = `/avatars/${payload.avatar}`
+    profilePopoverName.innerText = payload.name
+    profilePopoverName.style.color = payload.nameColor
+    profilePopoverBio.style.color = payload.textColor
+    profilePopover.style.backgroundColor = payload.bgColor
+    profilePopoverBio.innerText = payload.bio
+    profilePopover.classList.remove('hidden')
+  },
+  'bio-auth-required': payload => {
+    menuDataElements.bioInfo.innerText = 'Change name before writing bio'
+    menuDataElements.bioInfo.classList.add('bad')
+    menuDataElements.bioInfo.classList.remove('hidden')
+  },
+  'bio-ok': payload => {
+    menuDataElements.bioInfo.innerText = 'Saved'
+    menuDataElements.bioInfo.classList.remove('bad')
+    menuDataElements.bioInfo.classList.remove('hidden')
+  },
   'command-unauthorized': payload => {
     systemMessage('you are not authorized to use this command.')
   },
@@ -578,18 +607,18 @@ const payloadHandlers = {
     if (payload.view === 'command') {
       systemMessage('this Ko-fi email has already been claimed. if you believe this is an error, please contact lynn')
     } else if (payload.view === 'view') {
-      menuDataElements.kofiError.classList.remove('good')
-      menuDataElements.kofiError.innerText = 'Email claimed by another user'
-      menuDataElements.kofiError.classList.remove('hidden')
+      menuDataElements.kofiInfo.classList.remove('good')
+      menuDataElements.kofiInfo.innerText = 'Email claimed by another user'
+      menuDataElements.kofiInfo.classList.remove('hidden')
     }
   },
   'command-kofi-auth-required': payload => {
     if (payload.view === 'command') {
       systemMessage('only named users can set a Ko-fi email. use /name to name yourself')
     } else if (payload.view === 'menu') {
-      menuDataElements.kofiError.classList.remove('good')
-      menuDataElements.kofiError.innerText = 'Change name before changing email'
-      menuDataElements.kofiError.classList.remove('hidden')
+      menuDataElements.kofiInfo.classList.remove('good')
+      menuDataElements.kofiInfo.innerText = 'Change name before changing email'
+      menuDataElements.kofiInfo.classList.remove('hidden')
     }
   },
   'command-kofi-ok': payload => {
@@ -597,9 +626,9 @@ const payloadHandlers = {
     if (payload.view === 'command') {
       systemMessage(`changed Ko-fi email successfully. status: ${payload.kofi.subStatus ? '' : 'not '}subscribed${premiumText}`)
     } else if (payload.view === 'menu') {
-      menuDataElements.kofiError.classList.add('good')
-      menuDataElements.kofiError.innerText = `Saved${premiumText}`
-      menuDataElements.kofiError.classList.remove('hidden')
+      menuDataElements.kofiInfo.classList.add('good')
+      menuDataElements.kofiInfo.innerText = `Saved${premiumText}`
+      menuDataElements.kofiInfo.classList.remove('hidden')
       handleStatsData(payload.stats)
       handleKofiData(payload.kofi)
     }
@@ -612,18 +641,18 @@ const payloadHandlers = {
     if (payload.view === 'command') {
       systemMessage('only named users can set a password. use /name to log in')
     } else if (payload.view === 'menu') {
-      menuDataElements.passwordError.classList.remove('good')
-      menuDataElements.passwordError.innerText = 'Change name before changing password'
-      menuDataElements.passwordError.classList.remove('hidden')
+      menuDataElements.passwordInfo.classList.remove('good')
+      menuDataElements.passwordInfo.innerText = 'Change name before changing password'
+      menuDataElements.passwordInfo.classList.remove('hidden')
     }
   },
   'command-password-ok': payload => {
     if (payload.view === 'command') {
       systemMessage('changed password successfully')
     } else if (payload.view === 'menu') {
-      menuDataElements.passwordError.classList.add('good')
-      menuDataElements.passwordError.innerText = 'Saved'
-      menuDataElements.passwordError.classList.remove('hidden')
+      menuDataElements.passwordInfo.classList.add('good')
+      menuDataElements.passwordInfo.innerText = 'Saved'
+      menuDataElements.passwordInfo.classList.remove('hidden')
     }
   },
   'command-color-ok': payload => {
@@ -642,35 +671,35 @@ const payloadHandlers = {
     if (payload.view === 'command') {
       systemMessage('invalid name, only letters and numbers are allowed.')
     } else if (payload.view === 'menu') {
-      handleMenuProfileError('Invalid name, letters/numbers only')
+      handleMenuProfileInfo('Invalid name, letters/numbers only')
     }
   },
   'command-profile-auth-required': payload => {
     if (payload.view === 'command') {
       systemMessage('only named users can change their name color, and only Ko-fi subscribers can change text/background colors. use /name to name yourself')
     } else if (payload.view === 'menu') {
-      handleMenuProfileError('Change name before changing colors')
+      handleMenuProfileInfo('Change name before changing colors')
     }
   },
   'command-profile-sub-required': payload => {
     if (payload.view === 'command') {
       systemMessage('only users with a linked Ko-fi subscription can change text/background colors. use /kofi to link your email if you are already subbed')
     } else if (payload.view === 'menu') {
-      handleMenuProfileError('Update Ko-fi email in Settings first')
+      handleMenuProfileInfo('Update Ko-fi email in Settings first')
     }
   },
   'command-colors-invalid': payload => {
     if (payload.view === 'command') {
       systemMessage('invalid hex color. examples: #ff9999 (pink), #007700 (dark green), #3333ff (blue)')
     } else if (payload.view === 'menu') {
-      handleMenuProfileError('Invalid hex color')
+      handleMenuProfileInfo('Invalid hex color')
     }
   },
   'command-colors-fail': payload => {
     if (payload.view === 'command') {
       systemMessage(`Colors are not contrasted enough, ${payload.reason.toLowerCase()}`)
     } else if (payload.view === 'menu') {
-      handleMenuProfileError(payload.reason)
+      handleMenuProfileInfo(payload.reason)
     }
   },
   'command-profile-ok': payload => {
@@ -694,14 +723,14 @@ const payloadHandlers = {
     if (payload.view === 'command') {
       systemMessage(`invalid image. if you are certain the image you uploaded is valid, please contact lynn`)
     } else if (payload.view === 'menu') {
-      handleMenuProfileError(`Invalid image`, true)
+      handleMenuProfileInfo(`Invalid image`, true)
     }
   },
   'avatar-upload-auth-required': payload => {
     if (payload.view === 'command') {
       systemMessage('only named users can upload an avatar. use /name to name yourself')
     } else if (payload.view === 'menu') {
-      handleMenuProfileError('Change name before changing avatar', true)
+      handleMenuProfileInfo('Change name before changing avatar', true)
     }
   },
   'avatar-upload-ok': payload => {
@@ -1141,7 +1170,7 @@ const processKeyboardEvent = event => {
     // prevent newline character
     event.preventDefault()
 
-    const processedEntry = processEntry(entry.value)
+    const processedEntry = processText(entry.value)
 
     if (processedEntry !== '') {
       // send command/message
@@ -1322,7 +1351,7 @@ backgroundColorButton.addEventListener('click', event => {
 Coloris(colorisConfig)
 
 saveProfile.addEventListener('click', event => {
-  menuDataElements.profileError.classList.add('hidden')
+  menuDataElements.profileInfo.classList.add('hidden')
   saveProfile.classList.add('hidden')
   resetProfile.classList.add('hidden')
 
@@ -1359,7 +1388,7 @@ saveProfile.addEventListener('click', event => {
 })
 
 resetProfile.addEventListener('click', event => {
-  menuDataElements.profileError.classList.add('hidden')
+  menuDataElements.profileInfo.classList.add('hidden')
   resetProfile.classList.add('hidden')
   saveProfile.classList.add('hidden')
   nameColorButton.classList.remove('active')
@@ -1382,11 +1411,22 @@ resetProfile.addEventListener('click', event => {
   menuDataElements.background.style.backgroundColor = data.bgColor
   menuDataElements.background.style.fill = data.color
   menuDataElements.background.style.stroke = data.color
+  menuDataElements.bio.value = data.bio || ''
 })
 
 nameColorInput.addEventListener('close', event => nameColorButton.classList.remove('active'))
 messageColorInput.addEventListener('close', event => messageColorButton.classList.remove('active'))
 backgroundColorInput.addEventListener('close', event => backgroundColorButton.classList.remove('active'))
+
+menuDataElements.bio.addEventListener('input', event => saveBio.classList.remove('hidden'))
+
+saveBio.addEventListener('click', event => {
+  saveBio.classList.add('hidden')
+  send({
+    type: 'bio',
+    bio: sanitize(menuDataElements.bio.value)
+  })
+})
 
 let passwordCheckTimeout = null
 
@@ -1395,14 +1435,14 @@ const passwordOnInput = event => {
   clearTimeout(passwordCheckTimeout)
   passwordCheckTimeout = setTimeout(() => {
     if (changePasswordInput.value === '' || confirmPasswordInput.value === '') {
-      menuDataElements.passwordError.classList.add('hidden')
+      menuDataElements.passwordInfo.classList.add('hidden')
     } else if (changePasswordInput.value !== confirmPasswordInput.value) {
-      menuDataElements.passwordError.classList.remove('good')
-      menuDataElements.passwordError.innerText = 'Passwords do not match'
-      menuDataElements.passwordError.classList.remove('hidden')
+      menuDataElements.passwordInfo.classList.remove('good')
+      menuDataElements.passwordInfo.innerText = 'Passwords do not match'
+      menuDataElements.passwordInfo.classList.remove('hidden')
     } else {
       menuPassword = changePasswordInput.value
-      menuDataElements.passwordError.classList.add('hidden')
+      menuDataElements.passwordInfo.classList.add('hidden')
       savePassword.classList.remove('hidden')
     }
   }, 100)
@@ -1435,15 +1475,15 @@ kofiInput.addEventListener('input', event => {
   clearTimeout(kofiCheckTimeout)
   kofiCheckTimeout = setTimeout(() => {
     if (kofiInput.value === '') {
-      menuDataElements.kofiError.classList.add('hidden')
+      menuDataElements.kofiInfo.classList.add('hidden')
     } else if (validEmail(kofiInput.value)) {
       menuKofi = kofiInput.value
-      menuDataElements.kofiError.classList.add('hidden')
+      menuDataElements.kofiInfo.classList.add('hidden')
       saveKofi.classList.remove('hidden')
     } else {
-      menuDataElements.kofiError.classList.remove('good')
-      menuDataElements.kofiError.innerText = 'Invalid email'
-      menuDataElements.kofiError.classList.remove('hidden')
+      menuDataElements.kofiInfo.classList.remove('good')
+      menuDataElements.kofiInfo.innerText = 'Invalid email'
+      menuDataElements.kofiInfo.classList.remove('hidden')
     }
   }, 100)
 })
@@ -1488,6 +1528,24 @@ messages.addEventListener('scroll', event => {
       backToLatest.classList.add('hidden')
     }
   }, 100)
+})
+
+messages.addEventListener('click', event => {
+  const profileTrigger = event.target.closest('.msg-group .avatar, .msg-group .author')
+  if (profileTrigger !== null) {
+    const profileMessage = profileTrigger.closest('.msg-group').querySelector('.msg:first-of-type')
+    if (profileMessage !== null && profileMessage.id) {
+      send({
+        type: 'profile-from-message',
+        id: profileMessage.id.replace('msg-', '')
+      })
+
+      profilePopover.style.left = event.clientX + 10 + 'px'
+      profilePopover.style.top = event.clientY + 10 + 'px'
+    }
+  } else {
+    profilePopover.classList.add('hidden')
+  }
 })
 
 messages.addEventListener('contextmenu', event => {
@@ -1834,18 +1892,6 @@ if (streamInfo !== null) {
         createOffer()
       })
       .catch(err => onError(err.toString()))
-  }
-
-  const parseBoolString = (str, defaultVal) => {
-    str = (str || '')
-
-    if (['1', 'yes', 'true'].includes(str.toLowerCase())) {
-      return true
-    }
-    if (['0', 'no', 'false'].includes(str.toLowerCase())) {
-      return false
-    }
-    return defaultVal
   }
 
   loadStream()
