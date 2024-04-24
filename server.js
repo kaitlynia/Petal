@@ -79,7 +79,7 @@ if (fs.existsSync(dataPath)) {
   data = JSON.parse(fs.readFileSync(dataPath, 'utf8'))
 }
 
-const messageLookup = new Set([...data.messageHistory.map(message => {
+const messageLookup = new Map([...data.messageHistory.map(message => {
   return [message.id, {
     token: message.token,
     name: message.name
