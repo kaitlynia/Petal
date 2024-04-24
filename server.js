@@ -80,7 +80,7 @@ if (fs.existsSync(dataPath)) {
 }
 
 const messageLookup = new Set([...data.messageHistory.map(message => {
-  [message.id, {
+  return [message.id, {
     token: message.token,
     name: message.name
   }]
