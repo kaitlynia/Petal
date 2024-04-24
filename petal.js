@@ -59,6 +59,7 @@ savePassword = document.getElementById('savePassword'),
 kofiInput = document.getElementById('kofi'),
 saveKofi = document.getElementById('saveKofi'),
 showConnectionEvents = document.getElementById('showConnectionEvents'),
+autoReconnect = document.getElementById('autoReconnect'),
 messageScrollThreshold = document.getElementById('messageScrollThreshold'),
 shortMonthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
 passwordChar = '⬤',
@@ -76,6 +77,7 @@ validEmail = s => /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+
 const numMenuTabs = menuTabs.length
 
 let server = null,
+reconnectInterval = -1,
 controlKeyHeld = false,
 escapeKeyHeld = false,
 tempName = '',
@@ -111,7 +113,8 @@ data = {
   lastUserPrivateMessaged: localStorage.getItem('lastUserPrivateMessaged') || undefined,
   theme: localStorage.getItem('theme') || 'dark',
   messageScrollThreshold: Number(localStorage.getItem('messageScrollThreshold') || 250),
-  showConnectionEvents: localStorage.getItem('showConnectionEvents') === 'true',
+  showConnectionEvents: localStorage.getItem('showConnectionEvents') !== 'false',
+  autoReconnect: localStorage.getItem('autoReconnect') !== 'false',
 },
 avatarImage = document.createElement('img'),
 avatarCanvas = document.createElement('canvas'),
@@ -514,12 +517,7 @@ const payloadHandlers = {
     handleStatsData(payload.stats)
     handleKofiData(payload.kofi)
     setData('moderator', payload.moderator)
-    if (!loggedIn) {
-      loggedIn = true
-      systemMessage(`logged in as <b style="color: ${payload.nameColor};">${payload.name}</b>`)
-    } else {
-      systemMessage(`changed name to <b style="color: ${payload.nameColor};">${payload.name}</b>`)
-    }
+    systemMessage(`logged in as <b style="color: ${payload.nameColor};">${payload.name}</b>`)
   },
   'auth-fail-password': payload => {
     if (payload.view === 'command') {
@@ -546,7 +544,7 @@ const payloadHandlers = {
       const count = payload.participants.filter(m => m === n).length
       return count === 1 ? n : `${n} [${count}]`
     })
-    systemMessage(`${names.length} user${names.length !== 1 ? ' ' : ''} connected: ${counts.join(', ')}`)
+    systemMessage(`${names.length} user${names.length === 1 ? '' : 's'} connected: ${counts.join(', ')}`)
   },
   'participants-update': payload => {
     // TODO: implement UI for participants
@@ -783,12 +781,28 @@ const payloadHandlers = {
 
 const events = {
   onerror: event => {
-    systemMessage(`connection lost. use /connect or refresh the page`)
+    // don't display auto-reconnect errors
+    if (reconnectInterval !== -1) return
+    console.error(event)
   },
   onclose: event => {
-    systemMessage(`connection closed by server. use /connect or refresh the page`)
+    if (data.autoReconnect) {
+      if (reconnectInterval === -1) {
+        systemMessage(`connection closed by the server. trying to reconnect...`)
+        reconnectInterval = setInterval(() => {
+          if (reconnectInterval !== -1) {
+            server = connect(data.server)
+          }
+        }, 1000)
+      }
+    } else {
+      systemMessage(`connection closed by the server. use /connect or refresh the page`)
+    }
   },
   onopen: event => {
+    clearInterval(reconnectInterval)
+    reconnectInterval = -1
+
     if (data.showConnectionEvents) {
       systemMessage('connected')
     }
@@ -1523,6 +1537,11 @@ saveKofi.addEventListener('click', event => {
 showConnectionEvents.checked = data.showConnectionEvents
 showConnectionEvents.addEventListener('change', event => {
   setData('showConnectionEvents', showConnectionEvents.checked)
+})
+
+autoReconnect.checked = data.autoReconnect
+autoReconnect.addEventListener('change', event => {
+  setData('autoReconnect', autoReconnect.checked)
 })
 
 messageScrollThreshold.value = data.messageScrollThreshold

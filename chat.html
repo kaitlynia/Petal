@@ -80,12 +80,13 @@
             <p class="mb-sm">Client settings</p>
             <div class="smaller">
               <label for="theme" class="ml-xs">Theme:</label>
-              <select id="theme" class="mb-xs">
+              <select id="theme" class="mb-sm">
                 <option value="dark" selected>Dark</option>
               </select><br>
+              <label for="autoReconnect" class="ml-xs">Auto-reconnect:</label> <input id="autoReconnect" class="mb-md" type="checkbox" checked><br>
+              <label for="showConnectionEvents" class="ml-xs">Show connection events:</label> <input id="showConnectionEvents" class="mb-md" type="checkbox" checked><br>
               <label for="messageScrollThreshold" class="ml-xs">Scroll threshold:</label> <span data-message-scroll-threshold>250px</span><br>
-              <input type="range" id="messageScrollThreshold" class="ml-xs mr-xs" min="0" step="10" value="250" max="500"><br>
-              <label for="showConnectionEvents" class="ml-xs">Show connection events:</label> <input id="showConnectionEvents" type="checkbox" checked>
+              <input type="range" id="messageScrollThreshold" class="ml-xs mr-xs" min="0" step="10" value="250" max="500">
             </div>
           </div>
         </div>

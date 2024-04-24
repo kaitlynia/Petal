@@ -1,3 +1,5 @@
+'use strict';
+
 const crypto = require('crypto'),
 querystring = require('querystring'),
 fs = require('fs'),

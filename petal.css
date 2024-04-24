@@ -265,7 +265,7 @@ hr {
   padding-left: 0;
   list-style-type: none;
   position: absolute;
-  z-index: 1;
+  z-index: 2;
 }
 #messageContextMenu li {
   border: 0.25rem solid var(--lighten);
@@ -364,7 +364,7 @@ textarea:focus {
   text-align: center;
   user-select: none;
   width: 240px;
-  z-index: 1;
+  z-index: 2;
 }
 
 #menu {
@@ -376,7 +376,7 @@ textarea:focus {
 	position: absolute;
   right: 6%;
   width: 88%;
-  z-index: 2;
+  z-index: 4;
 }
 
 #menuTabs {
@@ -472,13 +472,12 @@ textarea:focus {
   background-color: var(--darkgrey);
   border: 0.25rem solid var(--lighten);
   border-radius: 0.5rem;
-  bottom: 190px;
   height: max-content;
-  left: 100px;
-  min-width: 180px;
   max-width: 280px;
-  position: absolute;
+  min-width: 180px;
   padding: 1rem;
+  position: absolute;
+  z-index: 2;
 }
 #profilePopoverRow {
   align-items: center;
