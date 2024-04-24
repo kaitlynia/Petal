@@ -67,6 +67,7 @@ currencyName = 'Petal',
 premiumCurrencyEmoji = '&#x1F338;',
 premiumCurrencyName = 'Blossom',
 maxMessageLength = 500,
+maxBioLength = 500,
 sanitize = s => DOMPurify.sanitize(s, sanitizeConfig),
 validName = s => s.length > 0 && !/[^0-9a-z]/i.test(s),
 validHexColor = s => s.length === 7 && /#[0-9a-f]{6}/i.test(s),
@@ -303,6 +304,7 @@ const handleProfileData = payload => {
   nameColorButton.classList.remove('hidden')
   handleColorsPayload(payload)
   setData('bio', payload.bio)
+  menuDataElements.bio.value = payload.bio
   handleStatsData(payload.stats)
   handleKofiData(payload.kofi)
 }
@@ -588,8 +590,10 @@ const payloadHandlers = {
     profilePopoverName.style.color = payload.nameColor
     profilePopoverBio.style.color = payload.textColor
     profilePopover.style.backgroundColor = payload.bgColor
-    profilePopoverBio.innerText = payload.bio || 'user has no bio'
+    profilePopoverBio.innerHTML = processText(payload.bio) || '<div class="no-bio"></div>'
     profilePopover.classList.remove('hidden')
+    profilePopover.style.left = Math.min(window.innerWidth - profilePopover.offsetWidth, Number(profilePopover.style.left.replace('px', ''))) + 'px'
+    profilePopover.style.top = Math.min(window.innerHeight - profilePopover.offsetHeight, Number(profilePopover.style.top.replace('px', ''))) + 'px'
     profilePopoverOpen = true
   },
   'bio-auth-required': payload => {
@@ -1429,10 +1433,15 @@ menuDataElements.bio.addEventListener('input', event => saveBio.classList.remove
 
 saveBio.addEventListener('click', event => {
   saveBio.classList.add('hidden')
-  send({
-    type: 'bio',
-    bio: sanitize(menuDataElements.bio.value)
-  })
+  if (menuDataElements.bio.value.length <= maxBioLength) {
+    send({
+      type: 'bio',
+      bio: sanitize(menuDataElements.bio.value)
+    })
+  } else {
+    menuDataElements.bioInfo.innerText = `Bio cannot be longer than ${maxBioLength} characters`
+    menuDataElements.bioInfo.classList.remove('hidden')
+  }
 })
 
 let passwordCheckTimeout = null

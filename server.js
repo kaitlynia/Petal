@@ -22,6 +22,7 @@ defaultNameColor = '#aaaaaa',
 defaultTextColor = '#ffffff',
 defaultBgColor = '#202020',
 maxMessageLength = 500,
+maxBioLength = 500,
 maxMessageHistory = 50,
 maxMessageLookup = 1000,
 socks = new Set(),
@@ -601,13 +602,15 @@ const payloadHandlers = {
   },
   'bio': (sock, payload) => {
     if (sock.token !== undefined && payload.bio !== undefined) {
-      const bio = data.nameBio[sock.name] = sanitize(payload.bio)
-      saveData()
+      if (payload.bio.length <= maxBioLength) {
+        const bio = data.nameBio[sock.name] = sanitize(payload.bio)
+        saveData()
 
-      sockSend(sock, {
-        type: 'bio-ok',
-        bio: bio
-      })
+        sockSend(sock, {
+          type: 'bio-ok',
+          bio: bio
+        })
+      }
     } else {
       sockSend(sock, {
         type: 'bio-auth-required'
