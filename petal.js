@@ -772,7 +772,7 @@ const payloadHandlers = {
     handleKofiData(payload.kofi)
   },
   'command-data-ok': payload => {
-    systemMessage(JSON.stringify(payload.data))
+    console.log(payload.data)
   },
   'command-addmod-ok': payload => {
     systemMessage(`added <b>${payload.name}</b> as a moderator`)
@@ -1306,7 +1306,7 @@ editNameIcon.addEventListener('click', menuNameOnClick)
 menuDataElements.name.addEventListener('focusout', event => {
   menuDataElements.name.contentEditable = 'false'
   if (menuDataElements.name.innerText === '') {
-    menuDataElements.name.innerText = data.name
+    menuDataElements.name.innerText = data.name || 'anon'
   }
   checkProfile()
 })
