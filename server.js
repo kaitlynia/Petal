@@ -487,6 +487,7 @@ const payloadHandlers = {
       sockSend(sock, {
         type: 'auth-new-ok',
         name: sock.name,
+        view: payload.view
       })
       updateParticipants(sock, 'joined as a new user (say hi!)')
     } else {

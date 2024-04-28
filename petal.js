@@ -61,6 +61,7 @@ saveKofi = document.getElementById('saveKofi'),
 showConnectionEvents = document.getElementById('showConnectionEvents'),
 autoReconnect = document.getElementById('autoReconnect'),
 messageScrollThreshold = document.getElementById('messageScrollThreshold'),
+clickAction = window.innerWidth > 768 ? 'Click' : 'Tap',
 shortMonthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
 passwordChar = '⬤',
 currencyEmoji = '&#x1F33A;',
@@ -232,8 +233,9 @@ const checkProfile = () => {
   const color = rgbToHex(menuDataElements.name.style.color)
   const textColor = rgbToHex(menuDataElements.message.style.color)
   const bgColor = rgbToHex(menuDataElements.background.style.backgroundColor)
+  console.log(data.color, data.textColor, data.bgColor)
 
-  if (name === data.name && color === data.color && textColor === data.textColor && bgColor === data.bgColor) {
+  if (name === (data.name || 'anon') && color === data.color && textColor === data.textColor && bgColor === data.bgColor) {
     menuDataElements.profileInfo.classList.add('hidden')
     menuDataElements.profileInfo.innerText = ''
     saveProfile.classList.add('hidden')
@@ -437,7 +439,25 @@ const payloadHandlers = {
     historyAdded = true
     addHistory(payload.history)
     if (data.name === undefined || data.token === undefined) {
-      systemMessage('welcome to Petal! you are currently anonymous. to change your name, click on the Petal icon, then "anon", enter a name, then click "Save". if you already have an account, repeat the process using the existing name, then enter your password. if you did not set a password previously, you will need to access the original browser/device you created the account with and set a password before logging in here.')
+      localStorage.removeItem('name')
+      localStorage.removeItem('token')
+      delete data.name
+      delete data.token
+      systemMessage(
+        `Welcome to Petal! You are currently anonymous.<br><br>
+
+        Register an account:<ol>
+        <li>${clickAction} on the Petal icon below</li>
+        <li>${clickAction} on the name "anon"</li>
+        <li>Enter your name</li>
+        <li>${clickAction} "Save"</li>
+        <li>${clickAction} "Settings" to change your password.<br><b>Required in order to log in using a different browser/device.</b></li></ol><br>
+
+        Log in:<ol>
+        <li>Repeat steps 1-4 above</li>
+        <li>Enter your password</li>
+        <li>${clickAction} "Submit"</li></ol><br>`
+      )
     }
   },
   'auth-exists': payload => {
@@ -489,7 +509,7 @@ const payloadHandlers = {
     if (payload.view === 'command') {
       systemMessage(`logged in. please set a password by accessing the Petal menu, then Settings`)
     } else if (payload.view === 'menu') {
-      handleMenuProfileOK('Logged in, set a password in Settings')
+      handleMenuProfileOK('Logged in, please set a password in Settings')
     }
   },
   'auth-password-ok': payload => {
@@ -1323,12 +1343,11 @@ menuDataElements.name.addEventListener('keydown', event => {
   }
 })
 
-let _nameColor =  window.getComputedStyle(menuDataElements.name).color
-menuDataElements.name.style.color = _nameColor
-menuDataElements.message.style.color = window.getComputedStyle(menuDataElements.message).color
-menuDataElements.background.style.backgroundColor = window.getComputedStyle(menuDataElements.background).backgroundColor
-menuDataElements.background.style.fill = _nameColor
-menuDataElements.background.style.stroke = _nameColor
+menuDataElements.name.style.color = data.color = rgbToHex(window.getComputedStyle(menuDataElements.name).color)
+menuDataElements.message.style.color = data.textColor = rgbToHex(window.getComputedStyle(menuDataElements.message).color)
+menuDataElements.background.style.backgroundColor = data.bgColor = rgbToHex(window.getComputedStyle(menuDataElements.background).backgroundColor)
+menuDataElements.background.style.fill = data.color
+menuDataElements.background.style.stroke = data.color
 
 nameColorButton.addEventListener('click', event => {
   if (nameColorButton.classList.contains('active')) {

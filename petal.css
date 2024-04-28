@@ -285,6 +285,9 @@ textarea {
 textarea:focus {
   outline: 0;
 }
+#entry {
+  width: calc(100% - 80px);
+}
 
 .msg-group {
   background-color: var(--darker);
@@ -342,14 +345,17 @@ textarea:focus {
 }
 
 #petal {
-  bottom: calc(var(--entry-height) + var(--medium));
-  cursor: pointer;
-  font-size: 3rem;
-  opacity: calc(2/3);
-  position: absolute;
-  right: 1.75rem;
-  user-select: none;
-  z-index: 1;
+	bottom: 1rem;
+	cursor: pointer;
+	opacity: calc(2/3);
+	position: absolute;
+	right: 1rem;
+	user-select: none;
+  width: 72px;
+	z-index: 1;
+}
+#petal:hover {
+  opacity: 1;
 }
 
 #backToLatest {
@@ -524,8 +530,8 @@ textarea:focus {
     bottom: calc(var(--entry-height) + var(--small));
   }
   #petal {
-    bottom: var(--entry-height);
-    right: 0.75rem;
+    bottom: 0;
+    right: 0;
   }
   #menu {
     bottom: calc(var(--entry-height) + 4.25rem);
