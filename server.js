@@ -17,7 +17,7 @@ sanitizeConfig = {
   ALLOWED_ATTR: ['href', 'target', 'rel']
 },
 sanitize = s => DOMPurify.sanitize(s, sanitizeConfig),
-validName = s => s.length > 0 && !/[^0-9a-z]/i.test(s),
+validName = s => s.length > 0 && !/[^0-9a-z]/i.test(s) && s !== 'anon',
 validHexColor = s => s.length === 7 && /#[0-9a-f]{6}/i.test(s),
 
 defaultNameColor = '#aaaaaa',
@@ -79,7 +79,8 @@ const saveData = () => {
 }
 
 if (fs.existsSync(dataPath)) {
-  data = JSON.parse(fs.readFileSync(dataPath, 'utf8'))
+  // ensure default values remain in case they are missing from data.json
+  data = {...data, ...JSON.parse(fs.readFileSync(dataPath, 'utf8'))}
 }
 
 const messageLookup = new Map([...data.messageHistory.map(message => {
@@ -296,7 +297,7 @@ const authToken = (sock, token, name, newName=false) => {
   }
 }
 
-const handleColorsPayload = (sock, payload) => {
+const handleColorsErrors = (sock, payload) => {
   if (!hasPetalPlus(sock.token) && (payload.textColor !== defaultTextColor || payload.bgColor !== defaultBgColor)) {
     sockSend(sock, {
       type: 'command-profile-sub-required',
@@ -410,7 +411,7 @@ const server = Bun.serve({
 
 const payloadHandlers = {
   'auth-name': (sock, payload) => {
-    if (payload.name === 'anon' || data.nameToken[payload.name] !== undefined) {
+    if (data.nameToken[payload.name] !== undefined) {
       // name already exists, notify client
       sockSend(sock, {
         type: 'auth-exists',
@@ -827,7 +828,7 @@ const payloadHandlers = {
     }
   },
   'command-colors': (sock, payload) => {
-    const valid = handleColorsPayload(sock, payload)
+    const valid = handleColorsErrors(sock, payload)
     if (valid) {
       data.nameColor[sock.name] = payload.nameColor
       data.nameTextColor[sock.name] = payload.textColor
@@ -836,65 +837,69 @@ const payloadHandlers = {
     }
   },
   'command-profile': (sock, payload) => {
-    if (sock.token !== undefined) {
-      if (payload.name !== undefined && validName(payload.name)) {
-        if (payload.name !== sock.name && data.nameToken[payload.name] !== undefined) {
-          sockSend(sock, {
-            type: 'auth-exists',
-            name: payload.name,
-            view: payload.view,
-          })
-        } else {
-          const valid = handleColorsPayload(sock, payload)
-          if (valid) {
-            if (payload.name !== sock.name) {
-              delete data.nameToken[sock.name]
-              data.nameToken[payload.name] = sock.token
-              data.tokenNames[sock.token] = [...data.tokenNames[sock.token].filter(n => n !== sock.name), payload.name]
-              data.nameAvatar[payload.name] = data.nameAvatar[sock.name]
-              delete data.nameAvatar[sock.name]
-            }
-            delete data.nameColor[sock.name]
-            sock.nameColor = data.nameColor[payload.name] = payload.nameColor
-            delete data.nameTextColor[sock.name]
-            sock.textColor = data.nameTextColor[payload.name] = payload.textColor
-            delete data.nameBgColor[sock.name]
-            sock.bgColor = data.nameBgColor[payload.name] = payload.bgColor
-            data.nameBio[payload.name] = data.nameBio[sock.name]
-            delete data.nameBio[sock.name]
-            sock.name = payload.name
-
-            if (sock.name !== payload.name) {
-              data.messageHistory.forEach(message => {
-                if (sock.name === message.name) {
-                  message.name = payload.name
-                }
-              })
-            }
-
-            sockSend(sock, {
-              type: 'command-profile-ok',
-              avatar: data.nameAvatar[payload.name] || 'anon.png',
-              name: payload.name,
-              nameColor: payload.nameColor,
-              textColor: payload.textColor,
-              bgColor: payload.bgColor,
-              view: payload.view,
-            })
-
-            sock.name = payload.name
-            saveData()
-          }
-        }
-      } else {
+    if (validName(payload.name)) {
+      if (payload.name !== sock.name && data.nameToken[payload.name] !== undefined) {
         sockSend(sock, {
-          type: 'command-profile-invalid-name',
+          type: 'auth-exists',
+          name: payload.name,
           view: payload.view,
         })
+      } else if (sock.token === undefined) {
+        sock.auth_pair = {
+          name: payload.name,
+          token: crypto.randomUUID()
+        }
+        sockSend(sock, {
+          type: 'auth-new',
+          name: payload.name,
+          token: sock.auth_pair.token,
+          view: payload.view,
+        })
+      } else {
+        const valid = handleColorsErrors(sock, payload)
+        if (valid) {
+          if (payload.name !== sock.name) {
+            delete data.nameToken[sock.name]
+            data.nameToken[payload.name] = sock.token
+            data.tokenNames[sock.token] = [...data.tokenNames[sock.token].filter(n => n !== sock.name), payload.name]
+            data.nameAvatar[payload.name] = data.nameAvatar[sock.name]
+            delete data.nameAvatar[sock.name]
+          }
+          delete data.nameColor[sock.name]
+          sock.nameColor = data.nameColor[payload.name] = payload.nameColor
+          delete data.nameTextColor[sock.name]
+          sock.textColor = data.nameTextColor[payload.name] = payload.textColor
+          delete data.nameBgColor[sock.name]
+          sock.bgColor = data.nameBgColor[payload.name] = payload.bgColor
+          data.nameBio[payload.name] = data.nameBio[sock.name]
+          delete data.nameBio[sock.name]
+          sock.name = payload.name
+
+          if (sock.name !== payload.name) {
+            data.messageHistory.forEach(message => {
+              if (sock.name === message.name) {
+                message.name = payload.name
+              }
+            })
+          }
+
+          sockSend(sock, {
+            type: 'command-profile-ok',
+            avatar: data.nameAvatar[payload.name] || 'anon.png',
+            name: payload.name,
+            nameColor: payload.nameColor,
+            textColor: payload.textColor,
+            bgColor: payload.bgColor,
+            view: payload.view,
+          })
+
+          sock.name = payload.name
+          saveData()
+        }
       }
     } else {
       sockSend(sock, {
-        type: 'command-profile-auth-required',
+        type: 'command-profile-invalid-name',
         view: payload.view,
       })
     }
