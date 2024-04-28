@@ -436,6 +436,9 @@ const payloadHandlers = {
     if (historyAdded) return
     historyAdded = true
     addHistory(payload.history)
+    if (data.name === undefined || data.token === undefined) {
+      systemMessage('welcome to Petal! you are currently anonymous. to change your name, click on the Petal icon, then "anon", enter a name, then click "Save". if you already have an account, repeat the process using the existing name, then enter your password. if you did not set a password previously, you will need to access the original browser/device you created the account with and set a password before logging in here.')
+    }
   },
   'auth-exists': payload => {
     if (data.token !== undefined && data.name === payload.name) {
