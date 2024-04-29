@@ -479,7 +479,7 @@ const payloadHandlers = {
   'auth-recv': (sock, payload) => {
     if (sock.auth_pair !== undefined) {
       sock.name = sock.auth_pair.name
-      data.nameToken[sock.name] = sock.auth_pair.token
+      sock.token = data.nameToken[sock.name] = sock.auth_pair.token
       data.tokenNames[sock.auth_pair.token] = [sock.name]
       delete sock.auth_pair
       saveData()
