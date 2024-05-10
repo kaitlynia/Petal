@@ -103,6 +103,7 @@ sanitizeConfig = {
   ALLOWED_TAGS: ['a', 'b', 'i', 's', 'u', 'br'],
   ALLOWED_ATTR: ['href', 'target', 'rel']
 },
+lastColorOpen = null,
 colorisConfig = {
   theme: 'pill',
   themeMode: 'dark',
@@ -1190,6 +1191,7 @@ const commands = {
         type: 'command-title',
         title: sanitize(args)
       })
+      systemMessage('updated stream title')
       return 1
     } else {
       systemMessage(`stream title: ${streamTitle.innerHTML}`)
@@ -1202,6 +1204,7 @@ const commands = {
           type: 'command-logstream',
           title: sanitize(streamTitle.innerHTML)
         })
+        systemMessage('sent stream history item')
         return 1
       } else {
         systemMessage('stream title is currently blank')
@@ -1338,6 +1341,7 @@ body.addEventListener('click', event => {
   }
   if (profilePopoverOpen && event.target.closest('#profilePopover') === null) {
     profilePopoverOpen = false
+    profilePopoverName.innerText = ''
     profilePopover.classList.add('hidden')
   }
   if (streamInfoMenuOpen && event.target.closest('#streamInfoMenu') === null) {
@@ -1385,6 +1389,7 @@ petal.addEventListener('click', event => {
   }
   if (profilePopoverOpen) {
     profilePopoverOpen = false
+    profilePopoverName.innerText = ''
     profilePopover.classList.add('hidden')
   }
   if (streamInfoMenuOpen) {
@@ -1429,6 +1434,7 @@ menuDataElements.background.style.fill = data.color
 menuDataElements.background.style.stroke = data.color
 
 nameColorButton.addEventListener('click', event => {
+  if (lastColorOpen === 'name') return
   if (nameColorButton.classList.contains('active')) {
     nameColorButton.classList.remove('active')
     return
@@ -1445,6 +1451,7 @@ nameColorButton.addEventListener('click', event => {
   nameColorInput.click()
 })
 messageColorButton.addEventListener('click', event => {
+  if (lastColorOpen === 'message') return
   if (messageColorButton.classList.contains('active')) {
     messageColorButton.classList.remove('active')
     event.preventDefault()
@@ -1460,6 +1467,7 @@ messageColorButton.addEventListener('click', event => {
   messageColorInput.click()
 })
 backgroundColorButton.addEventListener('click', event => {
+  if (lastColorOpen === 'bg') return
   if (backgroundColorButton.classList.contains('active')) {
     backgroundColorButton.classList.remove('active')
     return
@@ -1473,6 +1481,25 @@ backgroundColorButton.addEventListener('click', event => {
   }})
   backgroundColorInput.click()
 })
+
+let clearLastColorOpenTimeout = -1
+const clearLastColorOpen = () => clearLastColorOpenTimeout = setTimeout(() => {lastColorOpen = null}, 100)
+
+nameColorInput.addEventListener('open', () => {
+  clearTimeout(clearLastColorOpenTimeout)
+  lastColorOpen = 'name'
+})
+messageColorInput.addEventListener('open', () => {
+  clearTimeout(clearLastColorOpenTimeout)
+  lastColorOpen = 'message'
+})
+backgroundColorInput.addEventListener('open', () => {
+  clearTimeout(clearLastColorOpenTimeout)
+  lastColorOpen = 'bg'
+})
+nameColorInput.addEventListener('close', clearLastColorOpen)
+messageColorInput.addEventListener('close', clearLastColorOpen)
+backgroundColorInput.addEventListener('close', clearLastColorOpen)
 
 Coloris(colorisConfig)
 
@@ -1667,24 +1694,24 @@ messages.addEventListener('scroll', event => {
 })
 
 messages.addEventListener('click', event => {
-  if (profilePopoverOpen) {
-    profilePopoverOpen = false
-    profilePopover.classList.add('hidden')
-  } else {
-    const profileTrigger = event.target.closest('.msg-group .avatar, .msg-group .author')
-    if (profileTrigger !== null) {
-      const profileMessage = profileTrigger.closest('.msg-group').querySelector('.msg')
-      if (profileMessage !== null && profileMessage.id) {
-        send({
-          type: 'profile-from-message',
-          id: profileMessage.id.replace('msg-', '')
-        })
+  const profileTrigger = event.target.closest('.msg-group .avatar, .msg-group .author')
+  if (profileTrigger !== null) {
+    const profileMessage = profileTrigger.closest('.msg-group').querySelector('.msg')
+    if (
+      profileMessage !== null &&
+      profileTrigger.closest('.msg-group').querySelector('.author').innerText !== profilePopoverName.innerText &&
+      profileMessage.id !== ''
+    ) {
+      send({
+        type: 'profile-from-message',
+        id: profileMessage.id.replace('msg-', '')
+      })
 
-        profilePopover.style.left = event.clientX + 10 + 'px'
-        profilePopover.style.top = event.clientY + 'px'
-      }
+      profilePopover.style.left = event.clientX + 10 + 'px'
+      profilePopover.style.top = event.clientY + 'px'
     } else {
       profilePopoverOpen = false
+      profilePopoverName.innerText = ''
       profilePopover.classList.add('hidden')
     }
   }
@@ -1744,7 +1771,7 @@ if (streamPage) {
     const time = Date.now()
     let html = ''
     for (const stream of streamHistoryArray) {
-      html += `<li><span>${stream.title}</span><span>${formatTimeDelta(time - stream.time).split(' ')[0]} ago</span></li>`
+      html += `<li><code>${stream.title}</code><span>${formatTimeDelta(time - stream.time).split(' ')[0]} ago</span></li>`
     }
     menuDataElements.streamHistory.innerHTML = html
   }, 1000)

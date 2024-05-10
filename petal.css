@@ -247,6 +247,7 @@ hr {
 }
 
 #stream {
+  height: 56.25vw;
   width: 100%;
 }
 
@@ -322,7 +323,7 @@ hr {
 }
 
 #content-wrapper + #chat {
-  height: calc(100vh - calc(50vw + 138px));
+  height: calc(100vh - calc(56.25vw + 109px));
 }
 
 #chat, textarea, #messages {
@@ -457,9 +458,9 @@ textarea:focus {
 #menu {
   background-color: var(--dark);
   border: 0.25rem solid var(--lighten);
-  bottom: calc(var(--entry-height) + 6rem);
+  bottom: calc(var(--entry-height) + 4rem);
   display: block;
-  height: 50vh;
+  height: 60vh;
 	position: absolute;
   right: 6%;
   width: 88%;
@@ -484,7 +485,7 @@ textarea:focus {
 }
 
 #menuPages {
-  height: calc(50vh - 4rem);
+  height: calc(60vh - 4rem);
   overflow-y: auto;
   max-width: 100%;
   padding: 1rem;
@@ -600,6 +601,9 @@ textarea:focus {
   nav {
     font-size: 1.5rem;
   }
+  #stream {
+    height: 100%;
+  }
   #content-wrapper + #chat {
     height: 100%;
     min-width: 360px;
@@ -609,7 +613,6 @@ textarea:focus {
     padding: 0;
   }
   #menu {
-    bottom: calc(var(--entry-height) + 4.25rem);
     right: 0;
   }
   #menu {

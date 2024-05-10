@@ -21,7 +21,8 @@
         </div>
         <div id="menuPages">
           <div id="profilePage" class="menuPage active">
-            <div id="userProfile" class="msg-group mb-sm" data-profile-background>
+            <p>Change name / colors</p>
+            <div id="userProfile" class="msg-group mt-md mb-sm" data-profile-background>
               <img id="changeAvatar" class="avatar cursor-inherit" src="/avatars/anon.png" data-profile-avatar>
               <div class="col">
                 <div id="userProfileNameRow">
@@ -42,8 +43,8 @@
               <button id="saveProfile" class="good mr-sm hidden">Save</button><button id="resetProfile" class="bad hidden">Reset</button>
               <div class="menuInfoText hidden" data-profile-info></div>
             </div>
-            <hr class="mt-md mb-lg">
-            <label for="profileBio">Profile bio</label><br>
+            <hr class="mt-lg mb-lg">
+            <label for="profileBio">Bio</label><br>
             <textarea id="profileBio" class="mt-md mb-sm" spellcheck="false" data-profile-bio></textarea><br>
             <button id="saveBio" class="good hidden">Save</button>
             <div class="menuInfoText hidden" data-bio-info></div>
@@ -73,18 +74,18 @@
             <label for="changePassword">Change password</label><br>
             <input id="changePassword" class="ml-xs mt-sm mb-xs" type="password" placeholder="Enter password"><br>
             <input id="confirmPassword" class="ml-xs mb-sm" type="password" placeholder="Confirm password"><div class="menuInfoText ml-sm hidden" data-password-info>Passwords do not match</div><button id="savePassword" class="ml-sm good hidden">Save</button>
-            <hr>
+            <hr class="mt-lg mb-lg">
             <label for="kofi">Update Ko-fi email</label><br>
             <input id="kofi" class="ml-xs mt-sm mb-sm" type="email" placeholder="kofi@example.com"><div class="menuInfoText ml-sm hidden" data-kofi-info>Invalid email</div><button id="saveKofi" class="ml-sm good hidden">Save</button>
-            <hr>
-            <p class="mb-sm">Client settings</p>
+            <hr class="mt-lg mb-lg">
+            <p class="mb-md">Client settings</p>
             <div class="smaller">
               <label for="theme" class="ml-xs">Theme:</label>
-              <select id="theme" class="mb-sm">
+              <select id="theme" class="mb-md">
                 <option value="dark" selected>Dark</option>
               </select><br>
-              <label for="autoReconnect" class="ml-xs">Auto-reconnect:</label> <input id="autoReconnect" class="mb-md" type="checkbox" checked><br>
-              <label for="showConnectionEvents" class="ml-xs">Show connection events:</label> <input id="showConnectionEvents" class="mb-md" type="checkbox" checked><br>
+              <label for="autoReconnect" class="ml-xs">Auto-reconnect:</label> <input id="autoReconnect" class="mb-lg" type="checkbox" checked><br>
+              <label for="showConnectionEvents" class="ml-xs">Show connection events:</label> <input id="showConnectionEvents" class="mb-lg" type="checkbox" checked><br>
               <label for="messageScrollThreshold" class="ml-xs">Scroll threshold:</label> <span data-message-scroll-threshold>250px</span><br>
               <input type="range" id="messageScrollThreshold" class="ml-xs mr-xs" min="0" step="10" value="250" max="500">
             </div>
