@@ -50,7 +50,7 @@ let data = {
   hashBytes: 64,
   hashDigest: 'sha512',
   title: 'no stream title :(',
-  streamHistory: {},
+  streamHistory: [],
   dailyRevenue: {},
   dailySubs: {},
   dailyDonations: {},
@@ -417,7 +417,7 @@ const server = Bun.serve({
         history: getHistory(),
         participants: getParticipants(),
         title: data.title || 'no stream title :(',
-        streamHistory: data.streamHistory || {},
+        streamHistory: data.streamHistory || [],
       })
     },
     close(sock, code, message) {
