@@ -1773,7 +1773,8 @@ if (streamPage) {
     const time = Date.now()
     let html = ''
     for (const stream of streamHistoryArray) {
-      html += `<li><code>${stream.title}</code><span>${formatTimeDelta(time - stream.time).split(' ')[0]} ago</span></li>`
+      const streamTime = new Date(stream.time)
+      html += `<li><span>${stream.title}</span><span>~${formatTimeDelta(time - stream.time).split(' ')[0]} ago @ ${streamTime.getHours() % 12}:${streamTime.getMinutes()} ${streamTime.getHours() / 12 < 1 ? 'AM' : 'PM'}</span></li>`
     }
     menuDataElements.streamHistory.innerHTML = html
   }, 1000)
