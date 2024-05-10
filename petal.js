@@ -190,7 +190,6 @@ const resetMenu = () => {
   confirmPasswordInput.value = ''
   // end security lines
   resetProfile.click()
-  menuDataElements.bioInfo.classList.add('hidden')
   menuDataElements.passwordInfo.classList.add('hidden')
   kofiInput.value = ''
   menuDataElements.kofiInfo.classList.add('hidden')
@@ -1548,6 +1547,8 @@ resetProfile.addEventListener('click', event => {
   nameColorButton.classList.remove('active')
   messageColorButton.classList.remove('active')
   backgroundColorButton.classList.remove('active')
+  menuDataElements.bioInfo.classList.add('hidden')
+  saveBio.classList.add('hidden')
 
   if (!enterPasswordInput.classList.contains('hidden')) {
     menuDataElements.name.classList.remove('cursor-inherit')
