@@ -86,7 +86,6 @@ let server = null,
 reconnectInterval = -1,
 controlKeyHeld = false,
 escapeKeyHeld = false,
-streamTitle = '',
 tempName = '',
 passwordMode = false,
 entryPassword = '',
@@ -454,8 +453,7 @@ const payloadHandlers = {
   'hello': payload => {
     // payloadHandlers['participants-ok'](payload)
     if (streamPage) {
-      streamTitle = payload.title
-      streamInfo.innerHTML = streamTitle
+      streamTitle.innerHTML = streamTitle
       addStreamHistory(payload.streamHistory)
     }
 
@@ -631,8 +629,7 @@ const payloadHandlers = {
     }
   },
   'title': payload => {
-    streamTitle = payload.title
-    streamInfo.innerHTML = streamTitle
+    streamTitle.innerHTML = payload.title
   },
   'stream-history': payload => {
     addStreamHistory(payload.history)
@@ -1202,12 +1199,12 @@ const commands = {
       })
       return 1
     } else {
-      systemMessage(`stream title: ${streamTitle}`)
+      systemMessage(`stream title: ${streamTitle.innerHTML}`)
     }
   },
   logstream: args => {
     if (data.moderator) {
-      if (streamTitle && streamTitle.length > 0) {
+      if (streamTitle.innerHTML.length > 0) {
         send({
           type: 'command-logstream',
           title: sanitize(args)
