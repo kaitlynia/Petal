@@ -373,7 +373,7 @@ const addHistory = history => {
 const addStreamHistory = history => {
   let html = ''
   for (const stream of history) {
-    html += `<li><span>${stream.title}</span><span>${formatTimeDelta(stream.time)} ago</span></li>`
+    html += `<li><span>${stream.title}</span><span>${formatTimeDelta(Time.now() - stream.time)} ago</span></li>`
   }
   menuDataElements.streamHistory.innerHTML = html
 }
