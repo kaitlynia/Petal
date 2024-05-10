@@ -91,6 +91,7 @@ passwordMode = false,
 entryPassword = '',
 menuPassword = '',
 menuKofi = '',
+streamHistoryArray = [],
 historyAdded = false,
 loggedIn = false,
 lastMessageGroup = null,
@@ -370,14 +371,6 @@ const addHistory = history => {
   }
 }
 
-const addStreamHistory = history => {
-  let html = ''
-  for (const stream of history) {
-    html += `<li><span>${stream.title}</span><span>${formatTimeDelta(Date.now() - stream.time)} ago</span></li>`
-  }
-  menuDataElements.streamHistory.innerHTML = html
-}
-
 const systemMessage = message => {
   addMessage(message, 'system')
 }
@@ -454,7 +447,7 @@ const payloadHandlers = {
     // payloadHandlers['participants-ok'](payload)
     if (streamPage) {
       streamTitle.innerHTML = payload.title
-      addStreamHistory(payload.streamHistory)
+      streamHistoryArray = payload.streamHistory
     }
 
     if (historyAdded) return
@@ -632,7 +625,7 @@ const payloadHandlers = {
     streamTitle.innerHTML = payload.title
   },
   'stream-history': payload => {
-    addStreamHistory(payload.history)
+    streamHistoryArray = payload.history
   },
   'user-profile': payload => {
     profilePopoverAvatar.src = `/avatars/${payload.avatar}`
@@ -1747,6 +1740,15 @@ if (data.server !== undefined) {
 /* MediaMTX is MIT-licensed */
 
 if (streamPage) {
+  const streamHistoryInterval = setInterval(() => {
+    const time = Date.now()
+    let html = ''
+    for (const stream of streamHistoryArray) {
+      html += `<li><span>${stream.title}</span><span>${formatTimeDelta(time - stream.time).split()[0]} ago</span></li>`
+    }
+    menuDataElements.streamHistory.innerHTML = html
+  }, 1000)
+
   streamInfo.addEventListener('click', event => {
     if (!streamInfoMenuOpen) {
       event.stopPropagation()
