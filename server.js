@@ -49,6 +49,8 @@ let data = {
   hashIterations: 10000,
   hashBytes: 64,
   hashDigest: 'sha512',
+  title: 'no stream title :(',
+  streamHistory: {},
   dailyRevenue: {},
   dailySubs: {},
   dailyDonations: {},

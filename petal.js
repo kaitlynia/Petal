@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 const rootURL = window.location.href.split('://', 2)[1].split('/', 2)[0],
 body = document.getElementById('main'),
+stream = document.getElementById('stream'),
 messages = document.getElementById('messages'),
 messageContextMenu = document.getElementById('messageContextMenu'),
 profilePopover = document.getElementById('profilePopover'),
@@ -78,7 +79,8 @@ validName = s => s.length > 0 && !/[^0-9a-z]/i.test(s),
 validHexColor = s => s.length === 7 && /#[0-9a-f]{6}/i.test(s),
 validEmail = s => /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/.test(s)
 
-const numMenuTabs = menuTabs.length
+const streamPage = stream !== null,
+numMenuTabs = menuTabs.length
 
 let server = null,
 reconnectInterval = -1,
@@ -451,9 +453,11 @@ const send = payload => server.send(JSON.stringify(payload))
 const payloadHandlers = {
   'hello': payload => {
     // payloadHandlers['participants-ok'](payload)
-    streamTitle = payload.title
-    streamInfo.innerHTML = streamTitle
-    addStreamHistory(payload.streamHistory)
+    if (streamPage) {
+      streamTitle = payload.title
+      streamInfo.innerHTML = streamTitle
+      addStreamHistory(payload.streamHistory)
+    }
 
     if (historyAdded) return
     historyAdded = true
@@ -1745,9 +1749,7 @@ if (data.server !== undefined) {
 /* From https://github.com/bluenviron/mediamtx/blob/main/internal/servers/webrtc/read_index.html */
 /* MediaMTX is MIT-licensed */
 
-const stream = document.getElementById('stream')
-
-if (stream !== null) {
+if (streamPage) {
   streamInfo.addEventListener('click', event => {
     if (!streamInfoMenuOpen) {
       event.stopPropagation()
