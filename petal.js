@@ -1744,7 +1744,7 @@ if (streamPage) {
     const time = Date.now()
     let html = ''
     for (const stream of streamHistoryArray) {
-      html += `<li><span>${stream.title}</span><span>${formatTimeDelta(time - stream.time).split()[0]} ago</span></li>`
+      html += `<li><span>${stream.title}</span><span>${formatTimeDelta(time - stream.time).split(' ')[0]} ago</span></li>`
     }
     menuDataElements.streamHistory.innerHTML = html
   }, 1000)
