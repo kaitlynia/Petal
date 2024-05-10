@@ -303,7 +303,7 @@ hr {
   font-size: 1.25rem;
 }
 #streamInfoMenu ul {
-  padding: 1rem 0;
+  padding: 0.5rem 0;
 }
 #streamInfoMenu li {
   display: flex;
