@@ -322,7 +322,7 @@ hr {
 }
 
 #content-wrapper + #chat {
-  height: calc(100vh - calc(50vw + 135px));
+  height: calc(100vh - calc(50vw + 138px));
 }
 
 #chat, textarea, #messages {
