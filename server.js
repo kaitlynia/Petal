@@ -27,6 +27,7 @@ maxMessageLength = 500,
 maxBioLength = 500,
 maxMessageHistory = 50,
 maxMessageLookup = 1000,
+maxStreamHistory = 7,
 socks = new Set(),
 
 dailyCurrencyMin = 50,
@@ -89,6 +90,25 @@ const messageLookup = new Map([...data.messageHistory.map(message => {
     name: message.name
   }]
 })])
+
+/* omg i do not know if i want to sit thru this
+
+but it kinda rocks in a weird way
+
+^ _ ^   *( ^ w ^)  \ ( o A o );;/
+*/
+
+const logStream = title => {
+  const stream = {title: title, time: Date.now()}
+  if (data.streamHistory === undefined || data.streamHistory.length === 0) {
+    data.streamHistory = [stream]
+  } else {
+    data.streamHistory.unshift(stream)
+    if (data.streamHistory.length > maxStreamHistory) {
+      data.streamHistory.pop()
+    }
+  }
+}
 
 const luminance = hex => {
   a = hh => {
@@ -383,6 +403,7 @@ const server = Bun.serve({
   },
   websocket: {
     open(sock) {
+      sock.subscribe('stream')
       sock.subscribe('message')
       socks.add(sock)
       sock.name = 'anon'
@@ -392,7 +413,9 @@ const server = Bun.serve({
       sockSend(sock, {
         type: 'hello',
         history: getHistory(),
-        participants: getParticipants()
+        participants: getParticipants(),
+        title: data.title || 'no stream title :(',
+        streamHistory: data.streamHistory || {},
       })
     },
     close(sock, code, message) {
@@ -1014,6 +1037,21 @@ const payloadHandlers = {
       sockSend(sock, {
         type: 'command-unauthorized'
       })
+    }
+  },
+  'command-title': (sock, payload) => {
+    if (isModerator(sock.token) && payload.title && payload.title.length > 0) {
+      data.title = sanitize(payload.title)
+      server.publish('stream', JSON.stringify({type: 'title', title: data.title}))
+      saveData()
+    }
+  },
+  'command-logstream': (sock, payload) => {
+    if (isModerator(sock.token) && payload.title && payload.title.length > 0) {
+      const title = sanitize(payload.title)
+      logStream(title)
+      server.publish('stream', JSON.stringify({type: 'stream-history', history: data.streamHistory}))
+      saveData()
     }
   }
 }

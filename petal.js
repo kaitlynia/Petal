@@ -10,6 +10,8 @@ profilePopover = document.getElementById('profilePopover'),
 profilePopoverAvatar = document.getElementById('profilePopoverAvatar'),
 profilePopoverName = document.getElementById('profilePopoverName'),
 profilePopoverBio = document.getElementById('profilePopoverBio'),
+streamInfo = document.getElementById('stream-info'),
+streamInfoMenu = document.getElementById('streamInfoMenu'),
 entry = document.getElementById('entry'),
 backToLatest = document.getElementById('backToLatest'),
 petal = document.getElementById('petal'),
@@ -40,6 +42,7 @@ menuDataElements = {
   passwordInfo: document.querySelector('[data-password-info]'),
   kofiInfo: document.querySelector('[data-kofi-info]'),
   messageScrollThreshold: document.querySelector('[data-message-scroll-threshold]'),
+  streamHistory: document.querySelector('[data-stream-history]'),
 },
 changeAvatar = document.getElementById('changeAvatar'),
 editNameIcon = document.getElementById('editNameIcon'),
@@ -81,6 +84,7 @@ let server = null,
 reconnectInterval = -1,
 controlKeyHeld = false,
 escapeKeyHeld = false,
+streamTitle = '',
 tempName = '',
 passwordMode = false,
 entryPassword = '',
@@ -91,6 +95,7 @@ loggedIn = false,
 lastMessageGroup = null,
 messageContextMenuOpen = false,
 profilePopoverOpen = false,
+streamInfoMenuOpen = false,
 menuOpen = false,
 sanitizeConfig = {
   ALLOWED_TAGS: ['a', 'b', 'i', 's', 'u', 'br'],
@@ -233,13 +238,13 @@ const checkProfile = () => {
   const color = rgbToHex(menuDataElements.name.style.color)
   const textColor = rgbToHex(menuDataElements.message.style.color)
   const bgColor = rgbToHex(menuDataElements.background.style.backgroundColor)
-  console.log(data.color, data.textColor, data.bgColor)
 
   if (name === (data.name || 'anon') && color === data.color && textColor === data.textColor && bgColor === data.bgColor) {
     menuDataElements.profileInfo.classList.add('hidden')
     menuDataElements.profileInfo.innerText = ''
     saveProfile.classList.add('hidden')
     resetProfile.classList.add('hidden')
+    return false
   } else if (validName(name)) {
     const colorResult = checkColors(color, textColor, bgColor)
     if (colorResult.good) {
@@ -247,11 +252,14 @@ const checkProfile = () => {
       menuDataElements.profileInfo.innerText = ''
       saveProfile.classList.remove('hidden')
       resetProfile.classList.remove('hidden')
+      return true
     } else {
       handleMenuProfileInfo(colorResult.reason)
+      return false
     }
   } else {
     handleMenuProfileInfo('Invalid name, letters/numbers only')
+    return false
   }
 }
 
@@ -337,7 +345,7 @@ const addMessageGroup = (message, messageText) => {
   lastMessageGroup = message.name
   const idText = message.id !== undefined ? `id="msg-${message.id}" `: ''
 
-  messages.innerHTML += `<div class="msg-group" style="color: ${message.textColor}; background: ${message.bgColor};"><img class="avatar" src="/avatars/${message.avatar}"><div class="col"><div class="author" style="color: ${message.nameColor};">${message.name}</div><div ${idText}class="msg" style="color: ${message.textColor};">${messageText}</div></div>`
+  messages.innerHTML += `<div class="msg-group" style="color: ${message.textColor}; background: ${message.bgColor};"><img class="avatar" draggable="false" src="/avatars/${message.avatar}"><div class="col"><div class="author" style="color: ${message.nameColor};">${message.name}</div><div ${idText}class="msg" style="color: ${message.textColor};">${messageText}</div></div>`
 
   tryScrollFrom(scrollHeight)
 }
@@ -359,6 +367,14 @@ const addHistory = history => {
       addToLastMessageGroup(message, message.body)
     )
   }
+}
+
+const addStreamHistory = history => {
+  let html = ''
+  for (const stream of history) {
+    html += `<li><span>${stream.title}</span><span>${formatTimeDelta(stream.time)} ago</span></li>`
+  }
+  menuDataElements.streamHistory.innerHTML = html
 }
 
 const systemMessage = message => {
@@ -435,9 +451,14 @@ const send = payload => server.send(JSON.stringify(payload))
 const payloadHandlers = {
   'hello': payload => {
     // payloadHandlers['participants-ok'](payload)
+    streamTitle = payload.title
+    streamInfo.innerHTML = streamTitle
+    addStreamHistory(payload.streamHistory)
+
     if (historyAdded) return
     historyAdded = true
     addHistory(payload.history)
+
     if (data.name === undefined || data.token === undefined) {
       localStorage.removeItem('name')
       localStorage.removeItem('token')
@@ -604,6 +625,13 @@ const payloadHandlers = {
     if (message !== null) {
       message.innerText = '[message deleted]'
     }
+  },
+  'title': payload => {
+    streamTitle = payload.title
+    streamInfo.innerHTML = streamTitle
+  },
+  'stream-history': payload => {
+    addStreamHistory(payload.history)
   },
   'user-profile': payload => {
     profilePopoverAvatar.src = `/avatars/${payload.avatar}`
@@ -1113,7 +1141,7 @@ const commands = {
     if (data.lastUserPrivateMessaged === undefined) {
       systemMessage('no previous recipient. example: /w exampleUser23 hi, /c hello again!')
       return -1
-    } else if (args && args.length > 1) {
+    } else if (args && args.length > 0) {
       send({
         type: 'priv-message',
         name: data.lastUserPrivateMessaged,
@@ -1161,7 +1189,32 @@ const commands = {
       name: args,
     })
     return 1
-  }
+  },
+  title: args => {
+    if (data.moderator && args && args.length > 0) {
+      send({
+        type: 'command-title',
+        title: sanitize(args)
+      })
+      return 1
+    } else {
+      systemMessage(`stream title: ${streamTitle}`)
+    }
+  },
+  logstream: args => {
+    if (data.moderator) {
+      if (streamTitle && streamTitle.length > 0) {
+        send({
+          type: 'command-logstream',
+          title: sanitize(args)
+        })
+        return 1
+      } else {
+        systemMessage('stream title is currently blank')
+        return 1
+      }
+    }
+  },
 }
 
 const tryCommand = content => {
@@ -1279,6 +1332,27 @@ body.addEventListener('keyup', event => {
   }
 })
 
+body.addEventListener('click', event => {
+  if (menuOpen && event.target.closest('#menu') === null && document.querySelector('#clr-picker.clr-open') === null) {
+    menuOpen = false
+    Coloris.close()
+    menu.classList.add('hidden')
+    resetMenu()
+  }
+  if (messageContextMenuOpen && event.target.closest('#messageContextMenu') === null) {
+    clearMessageContextMenu()
+  }
+  if (profilePopoverOpen && event.target.closest('#profilePopover') === null) {
+    profilePopoverOpen = false
+    profilePopover.classList.add('hidden')
+  }
+  if (streamInfoMenuOpen && event.target.closest('#streamInfoMenu') === null) {
+    streamInfoMenuOpen = false
+    streamInfoMenu.classList.add('hidden')
+    streamInfo.classList.remove('active')
+  }
+})
+
 entry.addEventListener('keydown', event => {
   processKeyboardEvent(event)
 })
@@ -1319,6 +1393,11 @@ petal.addEventListener('click', event => {
     profilePopoverOpen = false
     profilePopover.classList.add('hidden')
   }
+  if (streamInfoMenuOpen) {
+    streamInfoMenuOpen = false
+    streamInfoMenu.classList.add('hidden')
+    streamInfo.classList.remove('active')
+  }
 })
 
 menuTabs.forEach(tab => tab.addEventListener('click', event => toggleMenuTab(tab)))
@@ -1326,20 +1405,26 @@ menuTabs.forEach(tab => tab.addEventListener('click', event => toggleMenuTab(tab
 menuDataElements.name.addEventListener('click', menuNameOnClick)
 editNameIcon.addEventListener('click', menuNameOnClick)
 
-menuDataElements.name.addEventListener('focusout', event => {
+const checkMenuName = () => {
   menuDataElements.name.contentEditable = 'false'
   if (menuDataElements.name.innerText === '') {
     menuDataElements.name.innerText = data.name || 'anon'
   }
   checkProfile()
+}
+
+menuDataElements.name.addEventListener('focusout', event => {
+  checkMenuName()
 })
 
 menuDataElements.name.addEventListener('keydown', event => {
   if (event.key === 'Enter') {
     event.preventDefault()
     event.stopPropagation()
-    const focusout = new Event('focusout')
-    menuDataElements.name.dispatchEvent(focusout)
+    const valid = checkMenuName()
+    if (valid) {
+      saveProfile.click()
+    }
   }
 })
 
@@ -1588,21 +1673,26 @@ messages.addEventListener('scroll', event => {
 })
 
 messages.addEventListener('click', event => {
-  const profileTrigger = event.target.closest('.msg-group .avatar, .msg-group .author')
-  if (profileTrigger !== null) {
-    const profileMessage = profileTrigger.closest('.msg-group').querySelector('.msg')
-    if (profileMessage !== null && profileMessage.id) {
-      send({
-        type: 'profile-from-message',
-        id: profileMessage.id.replace('msg-', '')
-      })
-
-      profilePopover.style.left = event.clientX + 10 + 'px'
-      profilePopover.style.top = event.clientY + 10 + 'px'
-    }
-  } else {
+  if (profilePopoverOpen) {
     profilePopoverOpen = false
     profilePopover.classList.add('hidden')
+  } else {
+    const profileTrigger = event.target.closest('.msg-group .avatar, .msg-group .author')
+    if (profileTrigger !== null) {
+      const profileMessage = profileTrigger.closest('.msg-group').querySelector('.msg')
+      if (profileMessage !== null && profileMessage.id) {
+        send({
+          type: 'profile-from-message',
+          id: profileMessage.id.replace('msg-', '')
+        })
+
+        profilePopover.style.left = event.clientX + 10 + 'px'
+        profilePopover.style.top = event.clientY + 'px'
+      }
+    } else {
+      profilePopoverOpen = false
+      profilePopover.classList.add('hidden')
+    }
   }
 })
 
@@ -1637,22 +1727,6 @@ messageContextMenu.addEventListener('click', event => {
   }
 })
 
-body.addEventListener('click', event => {
-  if (menuOpen && event.target.closest('#menu') === null && document.querySelector('#clr-picker.clr-open') === null) {
-    menuOpen = false
-    Coloris.close()
-    menu.classList.add('hidden')
-    resetMenu()
-  }
-  if (messageContextMenuOpen && event.target.closest('#messageContextMenu') === null) {
-    clearMessageContextMenu()
-  }
-  if (profilePopoverOpen && event.target.closest('#profilePopover') === null) {
-    profilePopoverOpen = false
-    profilePopover.classList.add('hidden')
-  }
-})
-
 window.addEventListener('resize', event => {
   const scrolled = tryScrollFrom(messages.scrollHeight)
   if (scrolled) {
@@ -1671,10 +1745,17 @@ if (data.server !== undefined) {
 /* From https://github.com/bluenviron/mediamtx/blob/main/internal/servers/webrtc/read_index.html */
 /* MediaMTX is MIT-licensed */
 
-const streamInfo = document.getElementById('stream-info')
+const stream = document.getElementById('stream')
 
-if (streamInfo !== null) {
-  const stream = document.getElementById('stream')
+if (stream !== null) {
+  streamInfo.addEventListener('click', event => {
+    if (!streamInfoMenuOpen) {
+      event.stopPropagation()
+      streamInfoMenuOpen = true
+      streamInfo.classList.add('active')
+      streamInfoMenu.classList.remove('hidden')
+    }
+  })
 
   const initialRetryDelay = 2000
   const retryDelayScalar = 1.5
@@ -1687,12 +1768,10 @@ if (streamInfo !== null) {
   let offerData = ''
   let queuedCandidates = []
 
-  const showStreamInfo = str => {
-    if (streamInfo !== null) {
-      streamInfo.innerText = str
-      streamInfo.style = 'display: block;'
-    }
-  }
+  // const showStreamInfo = str => {
+  //   streamInfo.innerText = str
+  //   streamInfo.style = 'display: block;'
+  // }
 
   const unquoteCredential = v => (
     JSON.parse(`"${v}"`)
@@ -1929,10 +2008,8 @@ if (streamInfo !== null) {
   }
 
   const onTrack = (evt) => {
-    if (streamInfo !== null) {
-      streamInfo.style = ''
-      stream.srcObject = evt.streams[0]
-    }
+    streamInfo.style = ''
+    stream.srcObject = evt.streams[0]
   }
 
   const requestICEServers = () => {

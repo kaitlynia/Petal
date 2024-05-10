@@ -38,7 +38,29 @@
 
 html {
   font-size: 14px;
-  line-height: 1.4;
+  line-height: 1.5;
+}
+
+nav {
+  align-items: center;
+  background-color: var(--dark);
+  color: var(--lightenest);
+  display: flex;
+  font-size: 1.25rem;
+  gap: min(7.5vw, 50px);
+  padding: 1rem 0 1rem 1.5rem;
+  width: 100%;
+}
+nav a:hover {
+  text-decoration: underline;
+}
+
+.homeLink {
+  color: #ffd3dd;
+}
+
+.kofiLink {
+  color: #ffadad;
 }
 
 a {
@@ -208,12 +230,19 @@ hr {
   margin-right: auto;
 }
 
-#stream-wrapper {
-  align-items: center;
+#content-wrapper {
+  align-items: flex-start;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   max-width: 100%;
   position: relative;
+  width: 100%;
+}
+
+#stream-wrapper {
+  display: flex;
+  flex-direction: column;
+  margin: auto 0;
   width: 100%;
 }
 
@@ -223,27 +252,72 @@ hr {
 
 #stream-info {
   align-items: center;
-  background-color: var(--darkgrey);
-  display: none;
-  font-size: 2rem;
-  top: calc(50% - 2rem);
-  color: var(--lightenest);
-  padding: var(--small) var(--large);
+  background-color: var(--dark);
+  color: var(--lightgrey);
+  cursor: pointer;
+  display: flex;
+  padding: 1rem 0 1rem 1.5rem;
+  position: relative;
+  width: 100%;
+}
+
+#streamTitle {
+  font-size: 1.25rem;
+  overflow-x: hidden;
+  max-width: 260px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#stream-info::after {
+  border-bottom: 0.25rem solid var(--grey);
+  border-right: 0.25rem solid var(--grey);
+  content: '';
+  height: 1rem;
   position: absolute;
-  text-align: center;
+  right: 1.5rem;
+  top: 1.1rem;
+  transform: rotate(45deg);
+  transition: all 0.2s ease-out;
+  width: 1rem;
+  z-index: 1;
+}
+#stream-info.active::after {
+  top: calc(5rem / 3);
+  transform: rotate(-135deg);
+}
+
+#streamInfoMenu {
+  background-color: var(--dark);
+  border-bottom: 0.25rem solid var(--lighten);
+  bottom: 3.875rem;
+  cursor: initial;
+  left: 0;
+  list-style-type: none;
+  padding: 1rem 0 1rem 1.5rem;
+  position: absolute;
+  width: 100%;
+}
+
+#streamInfoMenu li {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+#streamInfoMenu li span:last-child {
+  color: var(--grey);
 }
 
 #chat {
   height: 100%;
   margin-left: auto;
   max-width: 100%;
-  padding: var(--medium);
   position: relative;
   width: 100%;
 }
 
-#stream-wrapper + #chat {
-  height: calc(100vh - 56.25vw);
+#content-wrapper + #chat {
+  height: calc(100vh - calc(50vw + 135px));
 }
 
 #chat, textarea, #messages {
@@ -253,7 +327,7 @@ hr {
 }
 
 #messages {
-  height: calc(100% - 5.25rem);
+  height: calc(100% - calc(var(--entry-height) + 2.5rem));
   overflow-y: scroll;
   position: relative;
 }
@@ -286,12 +360,13 @@ textarea:focus {
   outline: 0;
 }
 #entry {
-  width: calc(100% - 80px);
+  margin: 1rem 0 1rem 0.75rem;
+  width: calc(100% - 6.5rem);
 }
 
 .msg-group {
   background-color: var(--darker);
-  padding: 0.75rem 0.5rem;
+  padding: 0.75rem 1rem;
   display: flex;
   overflow-wrap: anywhere;
 }
@@ -327,7 +402,7 @@ textarea:focus {
 }
 
 #messages > .msg {
-  padding: var(--small) 0.25rem;
+  padding: var(--small) 1rem;
 }
 
 #messages > .msg + .msg {
@@ -345,13 +420,13 @@ textarea:focus {
 }
 
 #petal {
-	bottom: 1rem;
+	bottom: 1.625rem;
 	cursor: pointer;
 	opacity: calc(2/3);
 	position: absolute;
-	right: 1rem;
+	right: 0.5rem;
 	user-select: none;
-  width: 72px;
+  width: 64px;
 	z-index: 1;
 }
 #petal:hover {
@@ -360,10 +435,11 @@ textarea:focus {
 
 #backToLatest {
   background-color: var(--dark);
-  border: 1px solid var(--lightener);
-  bottom: calc(var(--entry-height) + var(--large));
+  border: 0.25rem solid var(--lighten);
+  bottom: calc(var(--entry-height) + 3rem);
   cursor: pointer;
   font-size: 1rem;
+  letter-spacing: 0.5px;
   padding: 0.5rem;
   position: absolute;
   left: calc(50% - 120px);
@@ -393,6 +469,7 @@ textarea:focus {
   color: var(--lightenest);
 	cursor: pointer;
   letter-spacing: 1px;
+  overflow-x: hidden;
   padding: 1rem 0.8rem;
   user-select: none;
 }
@@ -477,7 +554,6 @@ textarea:focus {
 #profilePopover {
   background-color: var(--darkgrey);
   border: 0.25rem solid var(--lighten);
-  border-radius: 0.5rem;
   height: max-content;
   max-width: 280px;
   min-width: 180px;
@@ -491,7 +567,6 @@ textarea:focus {
   gap: 1rem;
 }
 #profilePopoverAvatar {
-  border-radius: 50%;
   height: 64px;
   width: 64px;
 }
@@ -513,25 +588,20 @@ textarea:focus {
 @media (min-width: 769px) {
   #main {
     flex-flow: row;
-    padding: var(--medium);
   }
-  #stream-wrapper {
-    margin-right: var(--medium);
+  #content-wrapper {
+    height: 100%;
   }
-  #stream-wrapper + #chat {
+  nav {
+    font-size: 1.5rem;
+  }
+  #content-wrapper + #chat {
     height: 100%;
     min-width: 360px;
     width: 25%;
   }
   #chat {
     padding: 0;
-  }
-  #backToLatest {
-    bottom: calc(var(--entry-height) + var(--small));
-  }
-  #petal {
-    bottom: 0;
-    right: 0;
   }
   #menu {
     bottom: calc(var(--entry-height) + 4.25rem);
@@ -541,7 +611,7 @@ textarea:focus {
     width: 480px;
     right: calc(50% - 240px);
   }
-  #stream-wrapper + #chat #menu {
+  #content-wrapper + #chat #menu {
     min-width: 306px;
     right: 5%;
     width: 90%;
@@ -569,17 +639,14 @@ textarea:focus {
   html {
     font-size: 16px;
   }
-  #main {
-    padding: var(--large);
-  }
-  #stream-wrapper + #chat {
+  #content-wrapper + #chat {
     min-width: 460px;
+  }
+  #petal {
+    width: 78px;
   }
   .menuTab {
     padding: 1rem 0.8rem;
-  }
-  #stream-wrapper {
-    margin-right: var(--large);
   }
   #messages > .msg {
     padding: var(--small) 0.75rem;

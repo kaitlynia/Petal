@@ -9,9 +9,22 @@
     <title>Petal</title>
   </head>
   <body id="main">
-    <div id="stream-wrapper">
-      <video id="stream" controls></video>
-      <div id="stream-info"></div>
+    <div id="content-wrapper">
+      <nav>
+        <a class="homeLink" href=".">lynnya.live</a>
+        <a class="kofiLink" href="https://ko-fi.com/lynnya" target="_blank">Ko-fi</a>
+        <a href="chat">Chat only</a>
+      </nav>
+      <div id="stream-wrapper">
+        <video id="stream" controls></video>
+        <div id="stream-info">
+          <div id="streamTitle">no stream title :(</div>
+          <div id="streamInfoMenu" class="hidden">
+            <p>Past streams:</p>
+            <ul data-stream-history></ul>
+          </div>
+        </div>
+      </div>
     </div>
     <div id="chat">
       <div id="backToLatest" class="hidden">Back to latest message</div>
