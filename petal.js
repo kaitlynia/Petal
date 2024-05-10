@@ -453,7 +453,7 @@ const payloadHandlers = {
   'hello': payload => {
     // payloadHandlers['participants-ok'](payload)
     if (streamPage) {
-      streamTitle.innerHTML = streamTitle
+      streamTitle.innerHTML = payload.title
       addStreamHistory(payload.streamHistory)
     }
 
