@@ -92,7 +92,7 @@ button:focus-visible, button:hover {
 
 input {
 	background-color: var(--lighten);
-  border: none;
+  border: 1px solid var(--lightener);
 	color: #ffffff;
   font-size: 1rem;
 	padding: 5px 8px 4px;
@@ -363,7 +363,7 @@ textarea {
   width: 100%;
 }
 textarea:focus {
-  outline: 0;
+  outline: none;
 }
 #entry {
   margin: 1rem 0 1rem 0.75rem;
@@ -525,7 +525,8 @@ textarea:focus {
 }
 #nameColor, #messageColor, #backgroundColor {
   background: none;
-  height: 0.75rem;
+  border: none;
+  height: 0.85rem;
   padding: 0;
 	position: absolute;
 	width: 0;
@@ -545,6 +546,9 @@ textarea:focus {
 }
 #clr-color-preview {
   pointer-events: none;
+}
+#enterPassword {
+  margin-right: 100%;
 }
 
 .menuInfoText {

@@ -564,6 +564,7 @@ const payloadHandlers = {
       systemMessage('incorrect password')
     } else if (payload.view === 'menu') {
       handleMenuProfileInfo('Incorrect password', true)
+      menuDataElements.name.innerText = data.name || 'anon'
       menuDataElements.name.classList.remove('cursor-inherit')
       menuDataElements.name.addEventListener('click', menuNameOnClick)
       editNameIcon.addEventListener('click', menuNameOnClick)
@@ -1409,12 +1410,8 @@ const checkMenuName = () => {
   if (menuDataElements.name.innerText === '') {
     menuDataElements.name.innerText = data.name || 'anon'
   }
-  checkProfile()
+  return checkProfile()
 }
-
-menuDataElements.name.addEventListener('focusout', event => {
-  checkMenuName()
-})
 
 menuDataElements.name.addEventListener('keydown', event => {
   if (event.key === 'Enter') {
@@ -1425,6 +1422,10 @@ menuDataElements.name.addEventListener('keydown', event => {
       saveProfile.click()
     }
   }
+})
+
+menuDataElements.name.addEventListener('focusout', event => {
+  checkMenuName()
 })
 
 menuDataElements.name.style.color = data.color = rgbToHex(window.getComputedStyle(menuDataElements.name).color)
@@ -1596,7 +1597,7 @@ const passwordOnInput = event => {
       menuDataElements.passwordInfo.classList.add('hidden')
     } else if (changePasswordInput.value !== confirmPasswordInput.value) {
       menuDataElements.passwordInfo.classList.remove('good')
-      menuDataElements.passwordInfo.innerText = 'Passwords do not match'
+      menuDataElements.passwordInfo.innerText = 'Does not match'
       menuDataElements.passwordInfo.classList.remove('hidden')
     } else {
       menuPassword = changePasswordInput.value
