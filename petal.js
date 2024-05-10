@@ -1207,7 +1207,7 @@ const commands = {
       if (streamTitle.innerHTML.length > 0) {
         send({
           type: 'command-logstream',
-          title: sanitize(args)
+          title: sanitize(streamTitle.innerHTML)
         })
         return 1
       } else {
