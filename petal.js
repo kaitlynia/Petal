@@ -1198,6 +1198,7 @@ const commands = {
       return 1
     } else {
       systemMessage(`stream title: ${streamTitleString}`)
+      return 1
     }
   },
   logstream: args => {
@@ -1210,7 +1211,7 @@ const commands = {
         systemMessage('sent stream history item')
         return 1
       } else {
-        systemMessage('stream title is currently blank')
+        systemMessage('stream title is blank')
         return 1
       }
     }
