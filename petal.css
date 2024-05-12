@@ -565,7 +565,7 @@ textarea:focus {
   background-color: var(--darkgrey);
   border: 0.25rem solid var(--lighten);
   height: max-content;
-  max-width: 280px;
+  max-width: 85%;
   min-width: 180px;
   padding: 1rem;
   position: absolute;

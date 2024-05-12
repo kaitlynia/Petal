@@ -91,6 +91,7 @@ passwordMode = false,
 entryPassword = '',
 menuPassword = '',
 menuKofi = '',
+streamTitleString = '',
 streamHistoryArray = [],
 historyAdded = false,
 loggedIn = false,
@@ -445,8 +446,9 @@ const send = payload => server.send(JSON.stringify(payload))
 const payloadHandlers = {
   'hello': payload => {
     // payloadHandlers['participants-ok'](payload)
+    streamTitleString = payload.title
     if (streamPage) {
-      streamTitle.innerHTML = payload.title
+      streamTitle.innerHTML = streamTitleString
       streamHistoryArray = payload.streamHistory
     }
 
@@ -623,7 +625,8 @@ const payloadHandlers = {
     }
   },
   'title': payload => {
-    streamTitle.innerHTML = payload.title
+    streamTitleString = payload.title
+    streamTitle.innerHTML = streamTitleString
   },
   'stream-history': payload => {
     streamHistoryArray = payload.history
@@ -1194,15 +1197,15 @@ const commands = {
       systemMessage('updated stream title')
       return 1
     } else {
-      systemMessage(`stream title: ${streamTitle.innerHTML}`)
+      systemMessage(`stream title: ${streamTitleString}`)
     }
   },
   logstream: args => {
     if (data.moderator) {
-      if (streamTitle.innerHTML.length > 0) {
+      if (streamTitleString.length > 0) {
         send({
           type: 'command-logstream',
-          title: sanitize(streamTitle.innerHTML)
+          title: sanitize(streamTitleString)
         })
         systemMessage('sent stream history item')
         return 1
