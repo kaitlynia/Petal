@@ -29,6 +29,7 @@ maxMessageHistory = 50,
 maxMessageLookup = 1000,
 maxStreamHistory = 7,
 socks = new Set(),
+webRoot = '/var/www/html',
 mediaServerHooksBase = '/mediamtx?',
 
 dailyCurrencyMin = 50,
@@ -393,7 +394,7 @@ const server = Bun.serve({
     cert: Bun.file(data.cert),
   },
   fetch(req, server) {
-    if (req.headers.get('Upgrade').toLowerCase() === 'websocket') {
+    if (req.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
       server.upgrade(req)
     } else if (req.method === 'POST') {
       // from Ko-fi probably
@@ -409,7 +410,7 @@ const server = Bun.serve({
       const payloadStr = req.url.split(mediaServerHooksBase, 2)[1]
       const payload = Object.fromEntries(payloadStr.split('&').map(e => e.split('=')))
       if (payload.type === 'vod-create') {
-        lastVOD = payload.vod
+        lastVOD = payload.vod.replace(webRoot, '')
       }
     }
   },
@@ -534,7 +535,7 @@ const payloadHandlers = {
   'avatar-upload': (sock, payload) => {
     if (sock.token !== undefined) {
       const avatar = crypto.randomUUID() + '.png'
-      fs.writeFile(`/var/www/html/avatars/${avatar}`, payload.data.replace('data:image/png;base64,', ''), 'base64', err => {
+      fs.writeFile(`${webRoot}/avatars/${avatar}`, payload.data.replace('data:image/png;base64,', ''), 'base64', err => {
         if (err) {
           sockSend(sock, {
             type: 'avatar-upload-fail',
@@ -544,7 +545,7 @@ const payloadHandlers = {
         } else {
           const oldAvatar = data.nameAvatar[sock.name]
           if (oldAvatar !== undefined) {
-            fs.unlink(`/var/www/html/avatars/${oldAvatar}`, (err) => {
+            fs.unlink(`${webRoot}/avatars/${oldAvatar}`, (err) => {
               if (err) throw err
             })
           }
