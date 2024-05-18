@@ -1778,7 +1778,7 @@ if (streamPage) {
     let html = ''
     for (const stream of streamHistoryArray) {
       const streamTime = new Date(stream.time)
-      html += `<li><span>${stream.title}</span><span>~${formatTimeDelta(time - stream.time).split(' ')[0]} ago @ ${streamTime.getHours() % 12}:${streamTime.getMinutes()} ${streamTime.getHours() / 12 < 1 ? 'AM' : 'PM'}</span></li>`
+      html += `<li><a href="${stream.vod}">${stream.title}</a><span>~${formatTimeDelta(time - stream.time).split(' ')[0]} ago @ ${streamTime.getHours() % 12}:${streamTime.getMinutes()} ${streamTime.getHours() / 12 < 1 ? 'AM' : 'PM'}</span></li>`
     }
     menuDataElements.streamHistory.innerHTML = html
   }, 1000)
@@ -1921,7 +1921,7 @@ if (streamPage) {
       if (offlineSince === null) {
         offlineSince = Date.now()
       }
-      showStreamInfo(`lynnya is offline (${formatTimeDelta(Date.now() - offlineSince)})`)
+      // showStreamInfo(`lynnya is offline (${formatTimeDelta(Date.now() - offlineSince)})`)
 
       if (pc !== null) {
         pc.close()
@@ -1958,9 +1958,9 @@ if (streamPage) {
         case 204:
           break
         case 404:
-          showStreamInfo('stream not found')
+          // showStreamInfo('stream not found')
         default:
-          showStreamInfo(`bad status code ${res.status}`)
+          // showStreamInfo(`bad status code ${res.status}`)
         }
       })
       .catch(err => {

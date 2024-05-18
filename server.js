@@ -29,6 +29,7 @@ maxMessageHistory = 50,
 maxMessageLookup = 1000,
 maxStreamHistory = 7,
 socks = new Set(),
+mediaServerHooksBase = '/mediamtx?',
 
 dailyCurrencyMin = 50,
 dailyCurrencyMax = 100,
@@ -75,7 +76,8 @@ let data = {
   nameBio: {},
   messageHistory: [],
   messageHistoryIndex: 0
-}
+},
+lastVOD = ''
 
 const saveData = () => {
   fs.writeFileSync(dataPath, JSON.stringify(data))
@@ -100,8 +102,8 @@ but it kinda rocks in a weird way
 ^ _ ^   *( ^ w ^)  \ ( o A o );;/
 */
 
-const logStream = title => {
-  const stream = {title: title, time: Date.now()}
+const logStream = (title, vod) => {
+  const stream = {title: title, vod: vod, time: Date.now()}
   if (data.streamHistory === undefined || data.streamHistory.length === 0) {
     data.streamHistory = [stream]
   } else {
@@ -391,7 +393,10 @@ const server = Bun.serve({
     cert: Bun.file(data.cert),
   },
   fetch(req, server) {
-    if (req.method === 'POST') {
+    if (req.headers.get('Upgrade').toLowerCase() === 'websocket') {
+      server.upgrade(req)
+    } else if (req.method === 'POST') {
+      // from Ko-fi probably
       req.on('data', data => {
         const payloadStr = querystring.parse(data.toString()).data
         if (payloadStr !== undefined) {
@@ -399,8 +404,13 @@ const server = Bun.serve({
         }
         return new Response(null, {status: 200})
       })
-    } else {
-      server.upgrade(req)
+    } else if (req.url.includes(mediaServerHooksBase)) {
+      // from MediaMTX probably
+      const payloadStr = req.url.split(mediaServerHooksBase, 2)[1]
+      const payload = Object.fromEntries(payloadStr.split('&').map(e => e.split('=')))
+      if (payload.type === 'vod-create') {
+        lastVOD = payload.vod
+      }
     }
   },
   websocket: {
@@ -1051,7 +1061,7 @@ const payloadHandlers = {
   'command-logstream': (sock, payload) => {
     if (isModerator(sock.token) && payload.title && payload.title.length > 0) {
       const title = sanitize(payload.title)
-      logStream(title)
+      logStream(title, lastVOD)
       server.publish('stream', JSON.stringify({type: 'stream-history', history: data.streamHistory}))
       saveData()
     }
