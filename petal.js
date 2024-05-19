@@ -1024,11 +1024,11 @@ const commands = {
         payloadHandlers['command-profile-auth-required']({view: 'command'})
           return 1
       }
-    } else if (data.color !== undefined) {
+    } else if (data.color !== undefined && data.color !== '#aaaaaa') {
       systemMessage(`your name color is <b style="color: ${data.color};">${data.color}</b>`)
       return 1
     } else {
-      systemMessage('you have the default name color. use /color <color> (ex. /color #ffaaaa)')
+      systemMessage(`you have the default name color (<b style="color: ${data.color};">${data.color}</b>). use /color <color> to change it (ex. /color #ffaaaa)`)
       return -1
     }
   },
@@ -1052,11 +1052,11 @@ const commands = {
         payloadHandlers['command-profile-auth-required']({view: 'command'})
         return 1
       }
-    } else if (data.textColor !== undefined) {
+    } else if (data.textColor !== undefined && data.textColor !== '#ffffff') {
       systemMessage(`your text color is <b style="color: ${data.textColor};">${data.textColor}</b>`)
       return 1
     } else {
-      systemMessage('you have the default text color. use /textcolor <color> (ex. /textcolor #ffaaaa)')
+      systemMessage(`you have the default text color (<b style="color: ${data.color};">${data.color}</b>). use /textcolor <color> to change it (ex. /textcolor #ffaaaa)`)
       return -1
     }
   },
@@ -1077,11 +1077,11 @@ const commands = {
         payloadHandlers['command-profile-auth-required']({view: 'command'})
         return -1
       }
-    } else if (data.bgColor !== undefined) {
+    } else if (data.bgColor !== undefined && data.bgColor !== '#202020') {
       systemMessage(`your background color is <b style="color: ${data.bgColor};">${data.bgColor}</b>`)
       return 1
     } else {
-      systemMessage('you have the default background color. use /bgcolor <color> (ex. /bgcolor #ffaaaa)')
+      systemMessage(`you have the default background color (<b>${data.bgColor}</b>). use /bgcolor <color> to change it (ex. /bgcolor #ffaaaa)`)
       return -1
     }
   },
