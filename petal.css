@@ -90,7 +90,7 @@ button:focus-visible, button:hover {
   outline: none;
 }
 
-input {
+input:not([type="range"]) {
 	background-color: var(--lighten);
   border: 1px solid var(--lightener);
 	color: #ffffff;
