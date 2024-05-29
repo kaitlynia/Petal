@@ -644,7 +644,7 @@ const payloadHandlers = {
       
       profilePopover.style.top = (Number(profilePopover.style.top.replace('px', '')) -profilePopover.offsetHeight) + 'px'}
     profilePopover.style.left = Math.min(window.innerWidth - profilePopover.offsetWidth, Number(profilePopover.style.left.replace('px', ''))) + 'px'
-    profilePopover.style.top = Math.min(window.innerHeight - profilePopover.offsetHeight, Number(profilePopover.style.top.replace('px', ''))) + 'px'
+    
     profilePopoverOpen = true
 
   },
