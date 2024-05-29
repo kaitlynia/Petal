@@ -841,7 +841,7 @@ const events = {
         reconnectInterval = setInterval(() => {
           if (reconnectInterval !== -1 && WebSocket.CLOSED) {
             server = connect(data.server)
-          }
+          }aaa
           else{
             systemMessage("already connected?")
           }
