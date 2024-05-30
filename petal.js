@@ -74,6 +74,7 @@ premiumCurrencyEmoji = '&#x1F338;',
 premiumCurrencyName = 'Blossom',
 maxMessageLength = 500,
 maxBioLength = 500,
+maxBioLines = 5,
 sanitize = s => DOMPurify.sanitize(s, sanitizeConfig),
 validName = s => s.length > 0 && !/[^0-9a-z]/i.test(s),
 validHexColor = s => s.length === 7 && /#[0-9a-f]{6}/i.test(s),
@@ -1587,14 +1588,20 @@ menuDataElements.bio.addEventListener('input', event => saveBio.classList.remove
 
 saveBio.addEventListener('click', event => {
   saveBio.classList.add('hidden')
-  if (menuDataElements.bio.value.length <= maxBioLength) {
+  if (menuDataElements.bio.value.length <= maxBioLength && menuDataElements.bio.value.split(/\r\n|\r|\n/).length<maxBioLines ) {
     send({
       type: 'bio',
       bio: sanitize(menuDataElements.bio.value)
     })
-  } else {
+  }else if(menuDataElements.bio.value.length > maxBioLength) {
     menuDataElements.bioInfo.innerText = `Bio cannot be longer than ${maxBioLength} characters`
     menuDataElements.bioInfo.classList.remove('hidden')
+  }
+   else if(menuDataElements.bio.value.split(/\r\n|\r|\n/).length>maxBioLines){
+  
+    menuDataElements.bioInfo.innerText= `Bio cannot be longer than ${maxBioLines} lines vertically`
+    menuDataElements.bioInfo.classList.remove('hidden')
+   
   }
 })
 
