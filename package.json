@@ -1,1 +1,1 @@
-{ "dependencies": { "dompurify": "^3.0.11", "jsdom": "^24.0.0" } }
+{"dependencies":{"dompurify":"^3.0.11","jsdom":"^24.0.0","tough-cookie":"^4.1.4"}}

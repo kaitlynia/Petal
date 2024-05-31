@@ -74,6 +74,7 @@ premiumCurrencyEmoji = '&#x1F338;',
 premiumCurrencyName = 'Blossom',
 maxMessageLength = 500,
 maxBioLength = 500,
+maxBioLines = 5,
 sanitize = s => DOMPurify.sanitize(s, sanitizeConfig),
 validName = s => s.length > 0 && !/[^0-9a-z]/i.test(s),
 validHexColor = s => s.length === 7 && /#[0-9a-f]{6}/i.test(s),
@@ -639,9 +640,14 @@ const payloadHandlers = {
     profilePopover.style.backgroundColor = payload.bgColor
     profilePopoverBio.innerHTML = processText(payload.bio) || '<div class="no-bio"></div>'
     profilePopover.classList.remove('hidden')
+    
+    if (Number(profilePopover.style.top.replace('px', '')) > (window.innerHeight/2)){
+      
+      profilePopover.style.top = (Number(profilePopover.style.top.replace('px', '')) -profilePopover.offsetHeight) + 'px'}
     profilePopover.style.left = Math.min(window.innerWidth - profilePopover.offsetWidth, Number(profilePopover.style.left.replace('px', ''))) + 'px'
-    profilePopover.style.top = Math.min(window.innerHeight - profilePopover.offsetHeight, Number(profilePopover.style.top.replace('px', ''))) + 'px'
+    
     profilePopoverOpen = true
+
   },
   'bio-auth-required': payload => {
     menuDataElements.bioInfo.innerText = 'Change name before writing bio'
@@ -842,6 +848,7 @@ const events = {
           if (reconnectInterval !== -1) {
             server = connect(data.server)
           }
+          
         }, 1000)
       }
     } else {
@@ -1581,14 +1588,20 @@ menuDataElements.bio.addEventListener('input', event => saveBio.classList.remove
 
 saveBio.addEventListener('click', event => {
   saveBio.classList.add('hidden')
-  if (menuDataElements.bio.value.length <= maxBioLength) {
+  if (menuDataElements.bio.value.length <= maxBioLength && menuDataElements.bio.value.split(/\r\n|\r|\n/).length<maxBioLines ) {
     send({
       type: 'bio',
       bio: sanitize(menuDataElements.bio.value)
     })
-  } else {
+  }else if(menuDataElements.bio.value.length > maxBioLength) {
     menuDataElements.bioInfo.innerText = `Bio cannot be longer than ${maxBioLength} characters`
     menuDataElements.bioInfo.classList.remove('hidden')
+  }
+   else if(menuDataElements.bio.value.split(/\r\n|\r|\n/).length>maxBioLines){
+  
+    menuDataElements.bioInfo.innerText= `Bio cannot be longer than ${maxBioLines} lines vertically`
+    menuDataElements.bioInfo.classList.remove('hidden')
+   
   }
 })
 
